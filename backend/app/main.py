@@ -101,8 +101,26 @@ app.include_router(pump_ops.router)
 # ── Health ─────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 async def health_check():
-    db_ok = check_db_connection()
-    redis_ok = check_redis_connection()
+    import asyncio
+    async def check_db():
+        try:
+            return await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(None, check_db_connection),
+                timeout=5.0,
+            )
+        except asyncio.TimeoutError:
+            return False
+
+    async def check_redis():
+        try:
+            return await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(None, check_redis_connection),
+                timeout=3.0,
+            )
+        except asyncio.TimeoutError:
+            return False
+
+    db_ok, redis_ok = await asyncio.gather(check_db(), check_redis())
     status = "healthy" if db_ok else "unhealthy"
     return {
         "status": status,

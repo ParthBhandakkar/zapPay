@@ -25,6 +25,8 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
+_connect_args = {"sslmode": "require", "connect_timeout": 10} if settings.is_supabase else {"connect_timeout": 10}
+
 engine = create_engine(
     settings.database_url_with_ssl,
     pool_pre_ping=settings.database_pool_pre_ping,
@@ -32,7 +34,7 @@ engine = create_engine(
     pool_size=settings.database_pool_size,
     max_overflow=settings.database_max_overflow,
     echo=settings.database_echo,
-    connect_args={"sslmode": "require"} if settings.is_supabase else {},
+    connect_args=_connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
