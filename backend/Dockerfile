@@ -43,6 +43,9 @@ COPY --from=builder /root/.local /root/.local
 # Application code
 COPY . .
 
+# Make entrypoint executable (before switching user)
+RUN chmod +x entrypoint.sh
+
 # Non-root user
 RUN groupadd -r zappay && useradd -r -g zappay -d /app -s /sbin/nologin zappay && \
     chown -R zappay:zappay /app/uploads 2>/dev/null || true
@@ -53,7 +56,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 USER zappay
-
-RUN chmod +x entrypoint.sh
 
 CMD ["./entrypoint.sh"]
