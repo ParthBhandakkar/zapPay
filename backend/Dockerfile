@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /build
 
 COPY requirements.txt .
-RUN pip install --user --no-warn-script-location -r requirements.txt
+RUN pip install --no-warn-script-location -r requirements.txt
 
 
 # =============================================================================
@@ -20,8 +20,7 @@ RUN pip install --user --no-warn-script-location -r requirements.txt
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/root/.local/bin:$PATH"
+    PYTHONUNBUFFERED=1
 
 # System deps for psycopg2, Pillow, EasyOCR
 RUN apt-get update && \
@@ -37,8 +36,8 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
+# Copy installed packages from builder (system-wide)
+COPY --from=builder /usr/local /usr/local
 
 # Application code
 COPY . .
