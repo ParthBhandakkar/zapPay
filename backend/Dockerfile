@@ -45,9 +45,10 @@ COPY . .
 # Make entrypoint executable (before switching user)
 RUN chmod +x entrypoint.sh
 
-# Non-root user
-RUN groupadd -r zappay && useradd -r -g zappay -d /app -s /sbin/nologin zappay && \
-    chown -R zappay:zappay /app/uploads 2>/dev/null || true
+# Create writable directories (before switching user)
+RUN mkdir -p /app/uploads /app/uploads/qr_codes && \
+    groupadd -r zappay && useradd -r -g zappay -d /app -s /sbin/nologin zappay && \
+    chown -R zappay:zappay /app/uploads
 
 EXPOSE 8000
 
