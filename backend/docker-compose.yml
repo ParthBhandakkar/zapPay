@@ -1,0 +1,80 @@
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zappay-api:latest
+    container_name: zappay-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+    depends_on:
+      redis:
+        condition: service_started
+    volumes:
+      - uploads:/app/uploads
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: zappay-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --save 300 10 --save 60 100
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  celery-worker:
+    image: zappay-api:latest
+    container_name: zappay-celery-worker
+    restart: unless-stopped
+    command: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+    logging: *default-logging
+
+  celery-beat:
+    image: zappay-api:latest
+    container_name: zappay-celery-beat
+    restart: unless-stopped
+    command: celery -A app.celery_app.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+    logging: *default-logging
+
+volumes:
+  redis-data:
+    driver: local
+  uploads:
+    driver: local

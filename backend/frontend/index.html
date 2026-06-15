@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>ZapPay Demo</title>
+	<link rel="stylesheet" href="./styles.css" />
+	<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+	<div class="container">
+		<h1>ZapPay Demo</h1>
+		<p class="subtitle">Choose your role: Customer or Pump Operator</p>
+
+		<section class="card role-selection">
+			<h2>Select Role</h2>
+			<div class="row">
+				<button id="customerBtn" class="role-btn">👤 Customer</button>
+				<button id="pumpBtn" class="role-btn">⛽ Pump Operator</button>
+			</div>
+			<div id="roleInfo" class="muted" style="margin-top: 10px;"></div>
+		</section>
+
+		<!-- Customer Interface -->
+		<div id="customerInterface" style="display: none;">
+			<nav class="tabs">
+				<button data-c-tab="dashboard" class="tab active">Dashboard</button>
+				<button data-c-tab="wallet" class="tab">Wallet</button>
+				<button data-c-tab="qr" class="tab">QR</button>
+				<button data-c-tab="profile" class="tab">Profile</button>
+				<button data-c-tab="kyc" class="tab">KYC</button>
+				<button data-c-tab="transactions" class="tab">Transactions</button>
+			</nav>
+			<section id="c-dashboard" class="card page">
+				<h2>Dashboard</h2>
+				<div id="c-dashboard-summary" class="result"></div>
+				<div id="c-dashboard-recent" class="result"></div>
+			</section>
+
+			<section class="card">
+				<h2>Customer Signup (OTP)</h2>
+				<div class="row">
+					<label for="signupFullName">Full Name</label>
+					<input id="signupFullName" type="text" placeholder="Your name" />
+				</div>
+				<div class="row">
+					<label for="signupPhone">Phone</label>
+					<input id="signupPhone" type="text" placeholder="e.g. 9876543210" />
+				</div>
+				<div class="row">
+					<label for="signupPassword">Password</label>
+					<input id="signupPassword" type="password" placeholder="Create password" />
+				</div>
+				<div class="row">
+					<button id="customerSignupSendOtpBtn">Send OTP</button>
+					<input id="signupOtpCode" type="text" placeholder="Enter OTP" />
+					<button id="customerSignupCompleteBtn">Complete Signup</button>
+				</div>
+				<p id="customerSignupStatus" class="muted"></p>
+			</section>
+			<section class="card">
+				<h2>Configuration</h2>
+				<div class="row">
+					<label for="customerApiBase">API Base URL</label>
+					<input id="customerApiBase" type="text" />
+				</div>
+				<div class="row">
+					<button id="saveCustomerConfigBtn">Save</button>
+				</div>
+				<p id="customerConfigStatus" class="muted"></p>
+			</section>
+
+			<section class="card">
+				<h2>Customer Login</h2>
+				<div class="row">
+					<label for="customerPhone">Phone (username)</label>
+					<input id="customerPhone" type="text" placeholder="e.g. 9999999999" />
+				</div>
+				<div class="row">
+					<label for="customerPassword">Password</label>
+					<input id="customerPassword" type="password" placeholder="password" />
+					<button id="customerLoginBtn">Login</button>
+					<button id="customerLogoutBtn" class="secondary">Logout</button>
+				</div>
+				<div class="row">
+					<button id="customerSendOtpLoginBtn">Send OTP</button>
+					<input id="customerOtpCode" type="text" placeholder="OTP" />
+					<button id="customerOtpLoginBtn">Login with OTP</button>
+				</div>
+				<p id="customerAuthStatus" class="muted"></p>
+			</section>
+
+			<section id="c-wallet" class="card page">
+				<h2>Wallet</h2>
+				<div class="row">
+					<button id="getWalletBalanceBtn">Get Balance</button>
+					<span id="walletBalance" class="muted"></span>
+				</div>
+				<div class="row">
+					<label for="rechargeAmount">Test Recharge Amount</label>
+					<input id="rechargeAmount" type="number" step="0.1" placeholder="e.g. 100.0" />
+					<button id="walletTestRechargeBtn">Test Recharge</button>
+				</div>
+				<p id="walletStatus" class="muted"></p>
+			</section>
+
+			<section id="c-qr" class="card page">
+				<h2>Generate My QR</h2>
+				<div class="row">
+					<label for="qrType">QR Type</label>
+					<select id="qrType">
+						<option value="mobile" selected>mobile</option>
+						<option value="sticker">sticker</option>
+					</select>
+				</div>
+				<div class="row">
+					<label for="validityHours">Validity (hours, optional)</label>
+					<input id="validityHours" type="number" min="1" placeholder="(optional)" />
+				</div>
+				<div class="row">
+					<button id="genQrBtn">Generate</button>
+				</div>
+				<div id="qrImageContainer" class="qr-image-container"></div>
+				<p id="qrStatus" class="muted"></p>
+			</section>
+
+			<section id="c-profile" class="card page">
+				<h2>My Profile</h2>
+				<div class="row">
+					<button id="getProfileBtn">Get Profile</button>
+				</div>
+				<div id="profileData" class="profile-data"></div>
+				<p id="profileStatus" class="muted"></p>
+			</section>
+
+			<section id="c-kyc" class="card page">
+				<h2>KYC</h2>
+				<div class="row">
+					<label for="aadhaar">Aadhaar</label>
+					<input id="aadhaar" type="text" placeholder="12-digit" />
+				</div>
+				<div class="row">
+					<label for="pan">PAN</label>
+					<input id="pan" type="text" placeholder="ABCDE1234F" />
+				</div>
+				<div class="row">
+					<label for="dl">Driving License</label>
+					<input id="dl" type="text" placeholder="Optional" />
+				</div>
+				<div class="row">
+					<button id="submitKycBtn">Submit KYC</button>
+					<button id="getKycStatusBtn" class="secondary">Get KYC Status</button>
+				</div>
+				<p id="kycStatus" class="muted"></p>
+			</section>
+			<section id="c-transactions" class="card page">
+				<h2>Transactions</h2>
+				<div id="c-transactions-list" class="result"></div>
+				<div class="row">
+					<button id="c-trans-prev" class="secondary">Prev</button>
+					<span id="c-trans-page" class="muted"></span>
+					<button id="c-trans-next">Next</button>
+				</div>
+			</section>
+		</div>
+
+		<!-- Pump Operator Interface -->
+		<div id="pumpInterface" style="display: none;">
+			<nav class="tabs">
+				<button data-p-tab="dashboard" class="tab active">Dashboard</button>
+				<button data-p-tab="setup" class="tab">Setup</button>
+				<button data-p-tab="scan" class="tab">Scan</button>
+				<button data-p-tab="transactions" class="tab">Transactions</button>
+				<button data-p-tab="operators" class="tab">Operators</button>
+			</nav>
+			<section class="card">
+				<h2>Pump Owner Signup (OTP)</h2>
+				<div class="row">
+					<label for="pumpSignupName">Full Name</label>
+					<input id="pumpSignupName" type="text" placeholder="Owner name" />
+				</div>
+				<div class="row">
+					<label for="pumpSignupPhone">Phone</label>
+					<input id="pumpSignupPhone" type="text" placeholder="e.g. 9876543211" />
+				</div>
+				<div class="row">
+					<label for="pumpSignupPassword">Password</label>
+					<input id="pumpSignupPassword" type="password" placeholder="Create password" />
+				</div>
+				<div class="row">
+					<button id="pumpSignupSendOtpBtn">Send OTP</button>
+					<input id="pumpSignupOtp" type="text" placeholder="OTP" />
+					<button id="pumpSignupCompleteBtn">Complete Signup</button>
+				</div>
+				<p id="pumpSignupStatus" class="muted"></p>
+			</section>
+			<section id="p-dashboard" class="card page">
+				<h2>Pump Dashboard</h2>
+				<div class="row">
+					<label for="dashPumpId">Pump ID</label>
+					<input id="dashPumpId" type="number" placeholder="1" />
+					<button id="loadPumpDashboardBtn">Load</button>
+				</div>
+				<div id="p-dashboard-summary" class="result"></div>
+			</section>
+
+			<section class="card">
+				<h2>Configuration</h2>
+				<div class="row">
+					<label for="pumpApiBase">Pump API Base URL</label>
+					<input id="pumpApiBase" type="text" />
+				</div>
+				<div class="row">
+					<label for="pumpCustomerApiBase">Customer API URL</label>
+					<input id="pumpCustomerApiBase" type="text" placeholder="http://localhost:8000" />
+				</div>
+				<div class="row">
+					<button id="savePumpConfigBtn">Save</button>
+				</div>
+				<p id="pumpConfigStatus" class="muted"></p>
+			</section>
+
+			<section class="card">
+				<h2>Pump Operator Login</h2>
+				<div class="row">
+					<label for="pumpPhone">Phone (username)</label>
+					<input id="pumpPhone" type="text" placeholder="e.g. 9876543212" />
+				</div>
+				<div class="row">
+					<label for="pumpPassword">Password</label>
+					<input id="pumpPassword" type="password" placeholder="test123" />
+				</div>
+				<div class="row">
+					<button id="pumpLoginBtn">Login</button>
+					<button id="pumpLogoutBtn" class="secondary">Logout</button>
+				</div>
+				<p id="pumpAuthStatus" class="muted"></p>
+			</section>
+
+			<section id="p-setup" class="card page">
+				<h2>Pump Setup</h2>
+				<div class="row">
+					<label for="setupPumpId">Pump ID</label>
+					<input id="setupPumpId" type="number" placeholder="1" />
+				</div>
+				<div class="row">
+					<label for="setupPumpName">Pump Name</label>
+					<input id="setupPumpName" type="text" placeholder="ZapPay Demo Pump" />
+				</div>
+				<div class="row">
+					<label for="setupPetrolPrice">Petrol Price (₹/L)</label>
+					<input id="setupPetrolPrice" type="number" step="0.1" placeholder="100.0" />
+				</div>
+				<div class="row">
+					<button id="savePumpSettingsBtn">Save Settings</button>
+					<button id="loadPumpSettingsBtn" class="secondary">Load Settings</button>
+				</div>
+				<p id="pumpSetupStatus" class="muted"></p>
+			</section>
+
+			<section id="p-scan" class="card page">
+				<h2>Scan Customer QR</h2>
+				<div class="row">
+					<button id="startScanBtn">Start Scanner</button>
+					<button id="stopScanBtn" class="secondary">Stop Scanner</button>
+				</div>
+				<div id="reader" class="reader"></div>
+				<p id="scanStatus" class="muted"></p>
+			</section>
+			<section id="p-transactions" class="card page">
+				<h2>Pump Transactions</h2>
+				<div class="row">
+					<label for="pumpHistId">Pump ID</label>
+					<input id="pumpHistId" type="number" placeholder="1" />
+					<button id="loadPumpTransactionsBtn">Load</button>
+				</div>
+				<div id="p-transactions-list" class="result"></div>
+				<div class="row">
+					<button id="p-trans-prev" class="secondary">Prev</button>
+					<span id="p-trans-page" class="muted"></span>
+					<button id="p-trans-next">Next</button>
+				</div>
+			</section>
+
+			<section id="p-operators" class="card page">
+				<h2>Operators</h2>
+				<div class="row">
+					<label for="opPumpId">Pump ID</label>
+					<input id="opPumpId" type="number" placeholder="1" />
+				</div>
+				<div class="row">
+					<label for="opPhone">Operator Phone</label>
+					<input id="opPhone" type="text" placeholder="98765xxxxx" />
+					<label for="opEmployeeId">Employee ID</label>
+					<input id="opEmployeeId" type="text" placeholder="EMP001" />
+					<button id="addOperatorBtn">Add Operator</button>
+				</div>
+				<p id="opStatus" class="muted"></p>
+			</section>
+		</div>
+
+		<!-- Purchase Popup (initially hidden) -->
+		<div id="purchasePopup" class="popup-overlay" style="display: none;">
+			<div class="popup-content">
+				<h2>Customer Details</h2>
+				<div id="customerDetails" class="customer-details"></div>
+
+				<h3>Fuel Purchase</h3>
+				<div class="row">
+					<label for="pumpId">Pump ID</label>
+					<input id="pumpId" type="number" placeholder="1" value="1" />
+				</div>
+				<div class="row">
+					<label for="fuelType">Fuel Type</label>
+					<select id="fuelType">
+						<option value="petrol" selected>Petrol</option>
+						<option value="diesel">Diesel</option>
+					</select>
+				</div>
+				<div class="row">
+					<label for="fuelQuantity">Fuel Quantity (L)</label>
+					<input id="fuelQuantity" type="number" step="0.1" placeholder="10.0" />
+				</div>
+				<div class="row">
+					<label for="fuelRate">Fuel Rate (₹/L)</label>
+					<input id="fuelRate" type="number" step="0.1" placeholder="100.0" />
+				</div>
+				<div class="row">
+					<button id="purchaseBtn">Complete Purchase</button>
+					<button id="cancelPurchaseBtn" class="secondary">Cancel</button>
+				</div>
+				<p id="purchaseStatus" class="muted"></p>
+			</div>
+		</div>
+	</div>
+	<script src="./app.js"></script>
+	<script>
+		window.addEventListener("DOMContentLoaded", () => {
+			window.ZapPayDemo.init();
+		});
+	</script>
+	<div id="toast" class="toast" style="display:none;"></div>
+</body>
+</html>
+
+

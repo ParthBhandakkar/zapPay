@@ -1,0 +1,3 @@
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.auth.AuthViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.auth.AuthViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.CustomerViewModel

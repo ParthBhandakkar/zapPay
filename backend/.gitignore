@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Database
+*.db
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.development
+!.env.example
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Frontend
+node_modules/
+frontend-react/node_modules/
+
+# Logs
+*.log
