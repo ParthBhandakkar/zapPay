@@ -3,7 +3,7 @@
 set -e
 
 PORT="${PORT:-8000}"
-WORKERS="${WORKERS:-2}"  # Use 2 workers on free tier (or 1 if memory-limited)
+WORKERS="${WORKERS:-1}"  # 1 worker on Render free tier (512MB, EasyOCR/Torch is heavy)
 
 echo "Starting ZapPay API on port $PORT with $WORKERS workers"
 
