@@ -87,11 +87,33 @@ class Settings(BaseSettings):
 
     @property
     def database_url_with_ssl(self) -> str:
-        url = self.database_url
-        if self.is_supabase and "sslmode" not in url:
-            separator = "&" if "?" in url else "?"
-            url = f"{url}{separator}sslmode=require"
-        return url
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+        parsed = urlparse(self.database_url)
+        qs = parse_qs(parsed.query, keep_blank_values=True)
+
+        if self.is_supabase and "sslmode" not in qs:
+            qs["sslmode"] = ["require"]
+
+        known_libpq_params = {
+            "sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl",
+            "sslcompression", "connect_timeout", "application_name",
+            "keepalives", "keepalives_idle", "keepalives_interval",
+            "keepalives_count", "target_session_attrs", "options",
+            "gssencmode", "replication", "ssl_min_protocol_version",
+            "ssl_max_protocol_version", "ssl_sni", "requirepeer",
+            "tcp_user_timeout", "channel_binding", "krbsrvname", "gsslib",
+        }
+        filtered = {k: v for k, v in qs.items() if k in known_libpq_params}
+
+        return urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            urlencode(filtered, doseq=True),
+            parsed.fragment,
+        ))
 
     class Config:
         env_file = ".env"

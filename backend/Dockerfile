@@ -20,7 +20,8 @@ RUN pip install --no-warn-script-location -r requirements.txt
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    EASYOCR_READER_PATH=/app/.EasyOCR
 
 # System deps for psycopg2, Pillow, EasyOCR
 RUN apt-get update && \
@@ -46,9 +47,9 @@ COPY . .
 RUN chmod +x entrypoint.sh
 
 # Create writable directories (before switching user)
-RUN mkdir -p /app/uploads /app/uploads/qr_codes && \
+RUN mkdir -p /app/uploads /app/uploads/qr_codes /app/.EasyOCR && \
     groupadd -r zappay && useradd -r -g zappay -d /app -s /sbin/nologin zappay && \
-    chown -R zappay:zappay /app/uploads
+    chown -R zappay:zappay /app/uploads /app/.EasyOCR
 
 EXPOSE 8000
 
