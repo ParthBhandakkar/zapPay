@@ -87,6 +87,7 @@ async def register_pump(
         data={"pump_id": pump.id}
     )
 
+@router.get("", response_model=List[PetrolPumpResponse])
 @router.get("/", response_model=List[PetrolPumpResponse])
 async def get_pumps(
     city: Optional[str] = None,

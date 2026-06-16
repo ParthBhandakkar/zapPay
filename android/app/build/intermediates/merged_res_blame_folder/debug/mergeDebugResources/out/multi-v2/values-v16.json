@@ -4,7 +4,7 @@
             "outputFile": "com.zappay.app-mergeDebugResources-73:/values-v16/values-v16.xml",
             "map": [
                 {
-                    "source": "D:\\.gradle\\caches\\8.11.1\\transforms\\0b4d2f174546f4e24f40bcd1e75c9ebd\\transformed\\appcompat-1.6.1\\res\\values-v16\\values-v16.xml",
+                    "source": "/Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/0b4d2f174546f4e24f40bcd1e75c9ebd/transformed/appcompat-1.6.1/res/values-v16/values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

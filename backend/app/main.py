@@ -93,6 +93,8 @@ app.include_router(pump_ops.router)
 
 # ── Health ─────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
+@app.get("/api/health", tags=["system"])
+@app.get("/api/v1/health", tags=["system"])
 async def health_check():
     import asyncio
     async def check_db():

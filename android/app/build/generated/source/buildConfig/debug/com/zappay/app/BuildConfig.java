@@ -10,5 +10,5 @@ public final class BuildConfig {
   public static final int VERSION_CODE = 1;
   public static final String VERSION_NAME = "1.0.0";
   // Field from default config.
-  public static final String BASE_URL = "http://10.0.2.2:8000/api/v1/";
+  public static final String BASE_URL = "https://zappay-6sof.onrender.com/api/v1/";
 }

@@ -211,30 +211,6 @@ async def validate_qr(
     }
 
 
-@router.post("/transactions/fuel-purchase")
-async def purchase_fuel(
-    purchase_data: FuelPurchaseRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-):
-    operator = require_pump_operator(db, credentials)
-    logger.info(
-        "Fuel purchase: pump=%d operator=%s fuel=%s qty=%.1f rate=%.2f",
-        purchase_data.pump_id, operator.full_name,
-        purchase_data.fuel_type, purchase_data.fuel_quantity, purchase_data.fuel_rate,
-    )
-    result = process_fuel_purchase(
-        db=db,
-        qr_code=purchase_data.qr_code,
-        pump_id=purchase_data.pump_id,
-        fuel_type=purchase_data.fuel_type,
-        fuel_quantity=purchase_data.fuel_quantity,
-        fuel_rate=purchase_data.fuel_rate,
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["message"])
-    return BaseResponse(success=True, message=result["message"], data=result)
-
 
 @router.post("/transactions/fuel-purchase-by-vehicle")
 async def purchase_fuel_by_vehicle(

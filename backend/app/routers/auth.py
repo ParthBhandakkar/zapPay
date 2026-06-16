@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 
 from app.database import get_db
@@ -49,8 +48,9 @@ async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
 	return {"success": True, "message": "Registration successful", "data": {"user_id": user.id}}
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-	user = authenticate_user(db, form_data.username, form_data.password)
+async def login(payload: UserLogin, db: Session = Depends(get_db)):
+	phone = payload.phone_number or payload.username
+	user = authenticate_user(db, phone, payload.password)
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 	expires = timedelta(minutes=settings.access_token_expire_minutes)

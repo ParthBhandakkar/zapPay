@@ -1,7 +1,7 @@
 package com.zappay.app.util
 
 object Constants {
-    const val BASE_URL = "http://10.0.2.2:8000/api/v1/"
+    const val BASE_URL = "https://zappay-6sof.onrender.com/api/v1/"
 
     const val ACCESS_TOKEN_KEY = "access_token"
     const val REFRESH_TOKEN_KEY = "refresh_token"

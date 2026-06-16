@@ -26,8 +26,9 @@ class ErrorResponse(BaseModel):
 
 # ── Auth ───────────────────────────────────────────────────────────────
 class UserLogin(BaseModel):
-    phone_number: str
+    username: str
     password: str
+    phone_number: Optional[str] = None
 
 
 class Token(BaseModel):
