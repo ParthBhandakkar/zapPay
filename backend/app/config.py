@@ -83,7 +83,7 @@ class Settings(BaseSettings):
 
     @property
     def is_supabase(self) -> bool:
-        return "supabase.co" in self.database_url.lower()
+        return "supabase.co" in self.database_url.lower() or "pooler.supabase.com" in self.database_url.lower()
 
     @property
     def database_url_with_ssl(self) -> str:

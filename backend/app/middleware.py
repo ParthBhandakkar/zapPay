@@ -12,11 +12,27 @@ from app.exceptions import RateLimitException
 logger = logging.getLogger("zappay.middleware")
 
 
+from starlette.responses import JSONResponse
+
+
+async def _safe_call_next(request: Request, call_next: Callable) -> Response:
+    """Call the next middleware/route and return a fallback response on failure."""
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        logger.warning("Unhandled exception in %s %s: %s", request.method, request.url.path, exc)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+            headers={"X-Request-ID": getattr(request.state, "request_id", "-")},
+        )
+
+
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
-        response = await call_next(request)
+        response = await _safe_call_next(request, call_next)
         response.headers["X-Request-ID"] = request_id
         return response
 
@@ -24,7 +40,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start = time.perf_counter()
-        response = await call_next(request)
+        response = await _safe_call_next(request, call_next)
         elapsed = time.perf_counter() - start
         response.headers["X-Response-Time-Ms"] = str(int(elapsed * 1000))
         if settings.debug or elapsed > 1.0:
@@ -41,26 +57,17 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         request_id = getattr(request.state, "request_id", "-")
+        logger.info("REQ  [%s] %s %s", request_id, request.method, request.url.path)
+        response = await _safe_call_next(request, call_next)
         logger.info(
-            "REQ  [%s] %s %s",
-            request_id,
-            request.method,
-            request.url.path,
-        )
-        response = await call_next(request)
-        logger.info(
-            "RESP [%s] %s %s -> %d",
-            request_id,
-            request.method,
-            request.url.path,
-            response.status_code,
+            "RESP [%s] %s %s -> %d", request_id, request.method, request.url.path, response.status_code,
         )
         return response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
+        response = await _safe_call_next(request, call_next)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -77,7 +84,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         if not settings.rate_limit_enabled:
-            return await call_next(request)
+            return await _safe_call_next(request, call_next)
 
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
@@ -94,7 +101,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.warning("Rate limit exceeded for %s", client_ip)
             raise RateLimitException()
 
-        return await call_next(request)
+        return await _safe_call_next(request, call_next)
 
 
 def register_middleware(app: FastAPI) -> None:
