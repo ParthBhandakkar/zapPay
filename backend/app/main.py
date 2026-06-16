@@ -24,13 +24,6 @@ async def lifespan(app: FastAPI):
     logger.info("Starting ZapPay API — environment=%s version=%s", settings.environment, settings.app_version)
     logger.info("Database: %s (supabase=%s)", "sqlite" if "sqlite" in settings.database_url else "postgresql", settings.is_supabase)
 
-    # Warm OCR reader in background
-    try:
-        from app.routers.pump_ops import _preload_ocr
-        _preload_ocr()
-    except Exception:
-        pass
-
     yield
 
     logger.info("Shutting down ZapPay API")
