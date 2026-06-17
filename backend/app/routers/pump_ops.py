@@ -242,19 +242,6 @@ async def purchase_fuel_by_vehicle(
     return BaseResponse(success=True, message=result["message"], data=result)
 
 
-@router.get("/pumps/{pump_id}")
-async def get_pump_details(
-    pump_id: int,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-):
-    require_pump_operator(db, credentials)
-    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
-    if not pump:
-        raise NotFoundException("Pump")
-    return pump
-
-
 @router.get("/operators/profile")
 async def get_operator_profile(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -306,11 +293,19 @@ async def get_pump_settings(
         key = f"pump_settings:{pump_id}"
         data = r.hgetall(key) or {}
         return {
-            "pump_id": pump_id,
-            "pump_name": data.get("pump_name", ""),
-            "petrol_price": data.get("petrol_price", "0"),
-            "diesel_price": data.get("diesel_price", "0"),
+            "success": True,
+            "message": "Settings loaded",
+            "data": {
+                "pump_id": pump_id,
+                "pump_name": data.get("pump_name", ""),
+                "petrol_price": data.get("petrol_price", "0"),
+                "diesel_price": data.get("diesel_price", "0"),
+            },
         }
     except Exception as e:
         logger.warning("Redis unavailable for pump settings: %s", e)
-        return {"pump_id": pump_id, "pump_name": "", "petrol_price": "0", "diesel_price": "0"}
+        return {
+            "success": True,
+            "message": "Settings loaded (from defaults)",
+            "data": {"pump_id": pump_id, "pump_name": "", "petrol_price": "0", "diesel_price": "0"},
+        }

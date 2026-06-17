@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import WalletResponse, WalletRecharge, BaseResponse, WebhookVerifyRequest
+from app.schemas import WalletResponse, WalletRecharge, WalletSummaryResponse, BaseResponse, WebhookVerifyRequest
 from app.services.auth import get_current_user
 from app.services.payment import (
     get_or_create_wallet, credit_wallet, get_wallet_summary,
@@ -26,7 +26,7 @@ async def get_wallet_balance(
     
     return wallet
 
-@router.get("/summary")
+@router.get("/summary", response_model=WalletSummaryResponse)
 async def get_wallet_summary_endpoint(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_wallet_summary_endpoint(
     user = get_current_user(db, credentials.credentials)
     summary = get_wallet_summary(db, user.id)
     
-    return summary
+    return WalletSummaryResponse(**summary)
 
 @router.post("/recharge/create-order", response_model=BaseResponse)
 async def create_recharge_order(

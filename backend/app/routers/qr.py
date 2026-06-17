@@ -111,40 +111,6 @@ async def deactivate_qr_code_endpoint(
         message="QR code deactivated successfully"
     )
 
-@router.post("/validate", response_model=BaseResponse)
-async def validate_qr_code_endpoint(
-    payload: QRCodeValidateRequest,
-    db: Session = Depends(get_db)
-):
-    """Validate a QR code (typically used by pump operators)."""
-
-    # This endpoint is used by pump operators to validate customer QR codes
-    # No authentication required - pump operators can validate any valid customer QR
-
-    validation_result = validate_qr_code(db, payload.qr_data)
-
-    if not validation_result:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired QR code"
-        )
-
-    user, qr_record = validation_result
-
-    return BaseResponse(
-        success=True,
-        message="QR code is valid",
-        data={
-            "user_id": user.id,
-            "user_name": user.full_name,
-            "user_phone": user.phone_number,
-            "qr_code_id": qr_record.id,
-            "qr_type": qr_record.qr_type,
-            "wallet_balance": user.wallet.balance if user.wallet else 0.0,
-            "vehicle_number": user.vehicle_number
-        }
-    )
-
 @router.get("/validate/{qr_data}")
 async def quick_validate_qr_code(
     qr_data: str,

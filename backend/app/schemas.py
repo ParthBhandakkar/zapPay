@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -141,6 +143,16 @@ class WalletResponse(BaseModel):
     total_spent: float
     is_active: bool
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WalletSummaryResponse(BaseModel):
+    balance: float
+    total_recharged: float
+    total_spent: float
+    monthly_spending: float
+    recent_transactions: list["TransactionResponse"]
 
     model_config = {"from_attributes": True}
 
