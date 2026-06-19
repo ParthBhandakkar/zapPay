@@ -11,26 +11,18 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
-import java.lang.reflect.Constructor
 import kotlin.Boolean
-import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
-import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class PumpSettingsDataJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PumpSettingsData>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("pump_id", "pump_name",
-      "fuel_types", "fuel_rates", "is_open", "petrol_price", "diesel_price", "cng_price")
-
-  private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(), "pumpId")
-
-  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
-      emptySet(), "pumpName")
+  private val options: JsonReader.Options = JsonReader.Options.of("fuel_types", "fuel_rates",
+      "is_open")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "fuelTypes")
@@ -38,65 +30,22 @@ public class PumpSettingsDataJsonAdapter(
   private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
       "isOpen")
 
-  @Volatile
-  private var constructorRef: Constructor<PumpSettingsData>? = null
-
   public override fun toString(): String = buildString(38) {
       append("GeneratedJsonAdapter(").append("PumpSettingsData").append(')') }
 
   public override fun fromJson(reader: JsonReader): PumpSettingsData {
-    var pumpId: Int? = null
-    var pumpName: String? = null
     var fuelTypes: String? = null
     var fuelRates: String? = null
-    var isOpen: Boolean? = false
-    var petrolPrice: String? = null
-    var dieselPrice: String? = null
-    var cngPrice: String? = null
-    var mask0 = -1
+    var isOpen: Boolean? = null
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
-        0 -> pumpId = intAdapter.fromJson(reader) ?: throw Util.unexpectedNull("pumpId", "pump_id",
-            reader)
-        1 -> {
-          pumpName = nullableStringAdapter.fromJson(reader)
-          // $mask = $mask and (1 shl 1).inv()
-          mask0 = mask0 and 0xfffffffd.toInt()
-        }
-        2 -> {
-          fuelTypes = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("fuelTypes",
-              "fuel_types", reader)
-          // $mask = $mask and (1 shl 2).inv()
-          mask0 = mask0 and 0xfffffffb.toInt()
-        }
-        3 -> {
-          fuelRates = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("fuelRates",
-              "fuel_rates", reader)
-          // $mask = $mask and (1 shl 3).inv()
-          mask0 = mask0 and 0xfffffff7.toInt()
-        }
-        4 -> {
-          isOpen = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("isOpen", "is_open",
-              reader)
-          // $mask = $mask and (1 shl 4).inv()
-          mask0 = mask0 and 0xffffffef.toInt()
-        }
-        5 -> {
-          petrolPrice = nullableStringAdapter.fromJson(reader)
-          // $mask = $mask and (1 shl 5).inv()
-          mask0 = mask0 and 0xffffffdf.toInt()
-        }
-        6 -> {
-          dieselPrice = nullableStringAdapter.fromJson(reader)
-          // $mask = $mask and (1 shl 6).inv()
-          mask0 = mask0 and 0xffffffbf.toInt()
-        }
-        7 -> {
-          cngPrice = nullableStringAdapter.fromJson(reader)
-          // $mask = $mask and (1 shl 7).inv()
-          mask0 = mask0 and 0xffffff7f.toInt()
-        }
+        0 -> fuelTypes = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("fuelTypes",
+            "fuel_types", reader)
+        1 -> fuelRates = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("fuelRates",
+            "fuel_rates", reader)
+        2 -> isOpen = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("isOpen",
+            "is_open", reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -105,40 +54,11 @@ public class PumpSettingsDataJsonAdapter(
       }
     }
     reader.endObject()
-    if (mask0 == 0xffffff01.toInt()) {
-      // All parameters with defaults are set, invoke the constructor directly
-      return  PumpSettingsData(
-          pumpId = pumpId ?: throw Util.missingProperty("pumpId", "pump_id", reader),
-          pumpName = pumpName,
-          fuelTypes = fuelTypes as String,
-          fuelRates = fuelRates as String,
-          isOpen = isOpen as Boolean,
-          petrolPrice = petrolPrice,
-          dieselPrice = dieselPrice,
-          cngPrice = cngPrice
-      )
-    } else {
-      // Reflectively invoke the synthetic defaults constructor
-      @Suppress("UNCHECKED_CAST")
-      val localConstructor: Constructor<PumpSettingsData> = this.constructorRef ?:
-          PumpSettingsData::class.java.getDeclaredConstructor(Int::class.javaPrimitiveType,
-          String::class.java, String::class.java, String::class.java,
-          Boolean::class.javaPrimitiveType, String::class.java, String::class.java,
-          String::class.java, Int::class.javaPrimitiveType, Util.DEFAULT_CONSTRUCTOR_MARKER).also {
-          this.constructorRef = it }
-      return localConstructor.newInstance(
-          pumpId ?: throw Util.missingProperty("pumpId", "pump_id", reader),
-          pumpName,
-          fuelTypes,
-          fuelRates,
-          isOpen,
-          petrolPrice,
-          dieselPrice,
-          cngPrice,
-          mask0,
-          /* DefaultConstructorMarker */ null
-      )
-    }
+    return PumpSettingsData(
+        fuelTypes = fuelTypes ?: throw Util.missingProperty("fuelTypes", "fuel_types", reader),
+        fuelRates = fuelRates ?: throw Util.missingProperty("fuelRates", "fuel_rates", reader),
+        isOpen = isOpen ?: throw Util.missingProperty("isOpen", "is_open", reader)
+    )
   }
 
   public override fun toJson(writer: JsonWriter, value_: PumpSettingsData?): Unit {
@@ -146,22 +66,12 @@ public class PumpSettingsDataJsonAdapter(
       throw NullPointerException("value_ was null! Wrap in .nullSafe() to write nullable values.")
     }
     writer.beginObject()
-    writer.name("pump_id")
-    intAdapter.toJson(writer, value_.pumpId)
-    writer.name("pump_name")
-    nullableStringAdapter.toJson(writer, value_.pumpName)
     writer.name("fuel_types")
     stringAdapter.toJson(writer, value_.fuelTypes)
     writer.name("fuel_rates")
     stringAdapter.toJson(writer, value_.fuelRates)
     writer.name("is_open")
     booleanAdapter.toJson(writer, value_.isOpen)
-    writer.name("petrol_price")
-    nullableStringAdapter.toJson(writer, value_.petrolPrice)
-    writer.name("diesel_price")
-    nullableStringAdapter.toJson(writer, value_.dieselPrice)
-    writer.name("cng_price")
-    nullableStringAdapter.toJson(writer, value_.cngPrice)
     writer.endObject()
   }
 }

@@ -25,7 +25,8 @@ public class PumpDashboardResponseJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PumpDashboardResponse>() {
   private val options: JsonReader.Options = JsonReader.Options.of("total_transactions",
-      "total_revenue", "transactions_today", "revenue_today", "recent_transactions")
+      "total_revenue", "total_commission", "transactions_today", "revenue_today",
+      "recent_transactions")
 
   private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(),
       "totalTransactions")
@@ -33,7 +34,7 @@ public class PumpDashboardResponseJsonAdapter(
   private val doubleAdapter: JsonAdapter<Double> = moshi.adapter(Double::class.java, emptySet(),
       "totalRevenue")
 
-  private val listOfTransactionDtoAdapter: JsonAdapter<List<TransactionDto>> =
+  private val nullableListOfTransactionDtoAdapter: JsonAdapter<List<TransactionDto>?> =
       moshi.adapter(Types.newParameterizedType(List::class.java, TransactionDto::class.java),
       emptySet(), "recentTransactions")
 
@@ -43,6 +44,7 @@ public class PumpDashboardResponseJsonAdapter(
   public override fun fromJson(reader: JsonReader): PumpDashboardResponse {
     var totalTransactions: Int? = null
     var totalRevenue: Double? = null
+    var totalCommission: Double? = null
     var transactionsToday: Int? = null
     var revenueToday: Double? = null
     var recentTransactions: List<TransactionDto>? = null
@@ -53,12 +55,13 @@ public class PumpDashboardResponseJsonAdapter(
             throw Util.unexpectedNull("totalTransactions", "total_transactions", reader)
         1 -> totalRevenue = doubleAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("totalRevenue", "total_revenue", reader)
-        2 -> transactionsToday = intAdapter.fromJson(reader) ?:
+        2 -> totalCommission = doubleAdapter.fromJson(reader) ?:
+            throw Util.unexpectedNull("totalCommission", "total_commission", reader)
+        3 -> transactionsToday = intAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("transactionsToday", "transactions_today", reader)
-        3 -> revenueToday = doubleAdapter.fromJson(reader) ?:
+        4 -> revenueToday = doubleAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("revenueToday", "revenue_today", reader)
-        4 -> recentTransactions = listOfTransactionDtoAdapter.fromJson(reader) ?:
-            throw Util.unexpectedNull("recentTransactions", "recent_transactions", reader)
+        5 -> recentTransactions = nullableListOfTransactionDtoAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -72,12 +75,13 @@ public class PumpDashboardResponseJsonAdapter(
             "total_transactions", reader),
         totalRevenue = totalRevenue ?: throw Util.missingProperty("totalRevenue", "total_revenue",
             reader),
+        totalCommission = totalCommission ?: throw Util.missingProperty("totalCommission",
+            "total_commission", reader),
         transactionsToday = transactionsToday ?: throw Util.missingProperty("transactionsToday",
             "transactions_today", reader),
         revenueToday = revenueToday ?: throw Util.missingProperty("revenueToday", "revenue_today",
             reader),
-        recentTransactions = recentTransactions ?: throw Util.missingProperty("recentTransactions",
-            "recent_transactions", reader)
+        recentTransactions = recentTransactions
     )
   }
 
@@ -90,12 +94,14 @@ public class PumpDashboardResponseJsonAdapter(
     intAdapter.toJson(writer, value_.totalTransactions)
     writer.name("total_revenue")
     doubleAdapter.toJson(writer, value_.totalRevenue)
+    writer.name("total_commission")
+    doubleAdapter.toJson(writer, value_.totalCommission)
     writer.name("transactions_today")
     intAdapter.toJson(writer, value_.transactionsToday)
     writer.name("revenue_today")
     doubleAdapter.toJson(writer, value_.revenueToday)
     writer.name("recent_transactions")
-    listOfTransactionDtoAdapter.toJson(writer, value_.recentTransactions)
+    nullableListOfTransactionDtoAdapter.toJson(writer, value_.recentTransactions)
     writer.endObject()
   }
 }

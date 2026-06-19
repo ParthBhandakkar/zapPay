@@ -89,7 +89,7 @@ class PumpViewModel @Inject constructor(
                     totalRevenue = d.totalRevenue,
                     transactionsToday = d.transactionsToday,
                     revenueToday = d.revenueToday,
-                    recentTransactions = d.recentTransactions,
+                    recentTransactions = d.recentTransactions ?: emptyList(),
                 )
             }
             is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)

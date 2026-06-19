@@ -378,3 +378,306 @@ class WebhookVerifyRequest(BaseModel):
     order_id: str
     signature: str
     payment_method: str
+
+
+# ── Pump Fuel Prices ──
+class PumpFuelPriceResponse(BaseModel):
+    id: int
+    pump_id: int
+    fuel_type: str
+    price: float
+    effective_from: datetime
+    effective_to: Optional[datetime] = None
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class PumpFuelPriceCreate(BaseModel):
+    fuel_type: str
+    price: float
+
+
+# ── Pump Devices ──
+class PumpDeviceResponse(BaseModel):
+    id: int
+    pump_id: int
+    device_id: str
+    device_name: str
+    is_active: bool
+    last_seen: Optional[datetime] = None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class PumpDeviceRegister(BaseModel):
+    device_id: str
+    device_name: str
+
+
+# ── Operator Shifts ──
+class OperatorShiftResponse(BaseModel):
+    id: int
+    pump_id: int
+    operator_id: int
+    shift_type: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    operator_name: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class ShiftStartRequest(BaseModel):
+    shift_type: str = "morning"
+    notes: Optional[str] = None
+
+
+# ── User Vehicles (Multi-Vehicle) ──
+class UserVehicleResponse(BaseModel):
+    id: int
+    user_id: int
+    vehicle_number: str
+    vehicle_type: Optional[str] = None
+    nickname: Optional[str] = None
+    is_primary: bool
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class UserVehicleCreate(BaseModel):
+    vehicle_number: str
+    vehicle_type: Optional[str] = None
+    nickname: Optional[str] = None
+    is_primary: bool = False
+
+
+class UserVehicleUpdate(BaseModel):
+    vehicle_number: Optional[str] = None
+    vehicle_type: Optional[str] = None
+    nickname: Optional[str] = None
+    is_primary: bool = False
+
+
+# ── Pump Inventory ──
+class PumpInventoryResponse(BaseModel):
+    id: int
+    pump_id: int
+    fuel_type: str
+    current_stock: float
+    max_capacity: float
+    last_updated: datetime
+    model_config = {"from_attributes": True}
+
+
+class PumpInventoryUpdate(BaseModel):
+    current_stock: float
+    max_capacity: Optional[float] = None
+
+
+# ── Disputes ──
+class DisputeResponse(BaseModel):
+    id: int
+    transaction_id: str
+    customer_id: int
+    reason: str
+    description: Optional[str] = None
+    status: str
+    resolution_notes: Optional[str] = None
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class DisputeCreate(BaseModel):
+    transaction_id: str
+    reason: str
+    description: Optional[str] = None
+
+
+# ── Notifications ──
+class NotificationEventResponse(BaseModel):
+    id: int
+    user_id: int
+    notification_type: str
+    title: str
+    body: str
+    is_read: bool
+    is_sent: bool
+    sent_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+# ── Support Tickets ──
+class SupportTicketResponse(BaseModel):
+    id: int
+    user_id: int
+    subject: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    priority: str
+    status: str
+    assigned_to: Optional[int] = None
+    resolution: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class SupportTicketCreate(BaseModel):
+    subject: str
+    description: Optional[str] = None
+    category: str = "other"
+    priority: str = "medium"
+
+
+# ── Fraud Rules ──
+class FraudRuleResponse(BaseModel):
+    id: int
+    name: str
+    rule_type: str
+    rule_config: str
+    is_active: bool
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class FraudRuleCreate(BaseModel):
+    name: str
+    rule_type: str
+    rule_config: str
+
+
+# ── Blacklist ──
+class BlacklistEntryResponse(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    pump_id: Optional[int] = None
+    reason: str
+    is_active: bool
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class BlacklistCreate(BaseModel):
+    user_id: Optional[int] = None
+    pump_id: Optional[int] = None
+    reason: str
+
+
+# ── Ledger ──
+class LedgerAccountResponse(BaseModel):
+    id: int
+    account_type: str
+    account_id: Optional[int] = None
+    balance: float
+    currency: str
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class LedgerEntryResponse(BaseModel):
+    id: int
+    ledger_account_id: int
+    transaction_id: Optional[str] = None
+    entry_type: str
+    amount: float
+    balance_before: Optional[float] = None
+    balance_after: Optional[float] = None
+    description: Optional[str] = None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+# ── Fleet ──
+class FleetAccountResponse(BaseModel):
+    id: int
+    company_name: str
+    admin_user_id: int
+    monthly_budget: float
+    is_active: bool
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class FleetAccountCreate(BaseModel):
+    company_name: str
+    monthly_budget: float = 0.0
+
+
+class FleetVehicleResponse(BaseModel):
+    id: int
+    fleet_id: int
+    vehicle_number: str
+    fuel_type: Optional[str] = None
+    monthly_fuel_limit: float
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class FleetVehicleCreate(BaseModel):
+    vehicle_number: str
+    fuel_type: Optional[str] = None
+    monthly_fuel_limit: float = 0.0
+
+
+class FleetDriverResponse(BaseModel):
+    id: int
+    fleet_id: int
+    user_id: int
+    daily_limit: float
+    is_active: bool
+    model_config = {"from_attributes": True}
+
+
+class FleetDriverAdd(BaseModel):
+    user_id: int
+    daily_limit: float = 0.0
+
+
+# ── Nearby Pump Response ──
+class NearbyPumpResponse(BaseModel):
+    id: int
+    pump_name: str
+    address: str
+    city: str
+    latitude: float
+    longitude: float
+    distance_km: float
+    fuel_types: List[str] = []
+    is_open: bool
+    fuel_prices: List[PumpFuelPriceResponse] = []
+
+
+# ── Pump Detail Response ──
+class PumpDetailResponse(BaseModel):
+    id: int
+    pump_name: str
+    owner_name: str
+    address: str
+    city: str
+    state: str
+    pincode: str
+    phone_number: str
+    email: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    fuel_types: str
+    is_open: bool
+    is_active: bool
+    is_verified: bool
+    fuel_prices: List[PumpFuelPriceResponse] = []
+    created_at: datetime
+
+
+# ── Admin Dashboard Extended ──
+class AdminDashboardExtended(AdminDashboard):
+    pending_pump_approvals: int = 0
+    open_disputes: int = 0
+    pending_refund_requests: int = 0
+    open_support_tickets: int = 0
+    pending_settlements: int = 0

@@ -21,15 +21,12 @@ import kotlin.text.buildString
 public class PumpSettingsResponseJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PumpSettingsResponse>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("success", "message", "data")
+  private val options: JsonReader.Options = JsonReader.Options.of("success", "data")
 
   private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
       "success")
 
-  private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
-      "message")
-
-  private val pumpSettingsDataAdapter: JsonAdapter<PumpSettingsData> =
+  private val nullablePumpSettingsDataAdapter: JsonAdapter<PumpSettingsData?> =
       moshi.adapter(PumpSettingsData::class.java, emptySet(), "data")
 
   public override fun toString(): String = buildString(42) {
@@ -37,17 +34,13 @@ public class PumpSettingsResponseJsonAdapter(
 
   public override fun fromJson(reader: JsonReader): PumpSettingsResponse {
     var success: Boolean? = null
-    var message: String? = null
     var data_: PumpSettingsData? = null
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
         0 -> success = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("success",
             "success", reader)
-        1 -> message = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("message",
-            "message", reader)
-        2 -> data_ = pumpSettingsDataAdapter.fromJson(reader) ?: throw Util.unexpectedNull("data_",
-            "data", reader)
+        1 -> data_ = nullablePumpSettingsDataAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -58,8 +51,7 @@ public class PumpSettingsResponseJsonAdapter(
     reader.endObject()
     return PumpSettingsResponse(
         success = success ?: throw Util.missingProperty("success", "success", reader),
-        message = message ?: throw Util.missingProperty("message", "message", reader),
-        `data` = data_ ?: throw Util.missingProperty("data_", "data", reader)
+        `data` = data_
     )
   }
 
@@ -70,10 +62,8 @@ public class PumpSettingsResponseJsonAdapter(
     writer.beginObject()
     writer.name("success")
     booleanAdapter.toJson(writer, value_.success)
-    writer.name("message")
-    stringAdapter.toJson(writer, value_.message)
     writer.name("data")
-    pumpSettingsDataAdapter.toJson(writer, value_.`data`)
+    nullablePumpSettingsDataAdapter.toJson(writer, value_.`data`)
     writer.endObject()
   }
 }

@@ -8,5 +8,5 @@
 -keepnames class kotlin.jvm.internal.DefaultConstructorMarker
 -if class com.zappay.app.data.remote.dto.PumpRegisterRequest
 -keepclassmembers class com.zappay.app.data.remote.dto.PumpRegisterRequest {
-    public synthetic <init>(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,int,kotlin.jvm.internal.DefaultConstructorMarker);
+    public synthetic <init>(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.Double,java.lang.Double,java.util.List,java.lang.Double,int,kotlin.jvm.internal.DefaultConstructorMarker);
 }

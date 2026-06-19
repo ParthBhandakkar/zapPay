@@ -9,13 +9,16 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
 import java.lang.reflect.Constructor
+import kotlin.Double
 import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
+import kotlin.collections.List
 import kotlin.collections.emptySet
 import kotlin.jvm.Volatile
 import kotlin.text.buildString
@@ -24,13 +27,21 @@ public class PumpRegisterRequestJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PumpRegisterRequest>() {
   private val options: JsonReader.Options = JsonReader.Options.of("pump_name", "owner_name",
-      "license_number", "address", "city", "state", "pincode", "phone_number", "email")
+      "license_number", "address", "city", "state", "pincode", "phone_number", "email", "latitude",
+      "longitude", "fuel_types", "daily_fuel_capacity")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "pumpName")
 
   private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
       emptySet(), "email")
+
+  private val nullableDoubleAdapter: JsonAdapter<Double?> =
+      moshi.adapter(Double::class.javaObjectType, emptySet(), "latitude")
+
+  private val nullableListOfStringAdapter: JsonAdapter<List<String>?> =
+      moshi.adapter(Types.newParameterizedType(List::class.java, String::class.java), emptySet(),
+      "fuelTypes")
 
   @Volatile
   private var constructorRef: Constructor<PumpRegisterRequest>? = null
@@ -48,6 +59,10 @@ public class PumpRegisterRequestJsonAdapter(
     var pincode: String? = null
     var phoneNumber: String? = null
     var email: String? = null
+    var latitude: Double? = null
+    var longitude: Double? = null
+    var fuelTypes: List<String>? = null
+    var dailyFuelCapacity: Double? = null
     var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
@@ -73,6 +88,26 @@ public class PumpRegisterRequestJsonAdapter(
           // $mask = $mask and (1 shl 8).inv()
           mask0 = mask0 and 0xfffffeff.toInt()
         }
+        9 -> {
+          latitude = nullableDoubleAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 9).inv()
+          mask0 = mask0 and 0xfffffdff.toInt()
+        }
+        10 -> {
+          longitude = nullableDoubleAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 10).inv()
+          mask0 = mask0 and 0xfffffbff.toInt()
+        }
+        11 -> {
+          fuelTypes = nullableListOfStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 11).inv()
+          mask0 = mask0 and 0xfffff7ff.toInt()
+        }
+        12 -> {
+          dailyFuelCapacity = nullableDoubleAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 12).inv()
+          mask0 = mask0 and 0xffffefff.toInt()
+        }
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -81,7 +116,7 @@ public class PumpRegisterRequestJsonAdapter(
       }
     }
     reader.endObject()
-    if (mask0 == 0xfffffeff.toInt()) {
+    if (mask0 == 0xffffe0ff.toInt()) {
       // All parameters with defaults are set, invoke the constructor directly
       return  PumpRegisterRequest(
           pumpName = pumpName ?: throw Util.missingProperty("pumpName", "pump_name", reader),
@@ -94,7 +129,11 @@ public class PumpRegisterRequestJsonAdapter(
           pincode = pincode ?: throw Util.missingProperty("pincode", "pincode", reader),
           phoneNumber = phoneNumber ?: throw Util.missingProperty("phoneNumber", "phone_number",
               reader),
-          email = email
+          email = email,
+          latitude = latitude,
+          longitude = longitude,
+          fuelTypes = fuelTypes,
+          dailyFuelCapacity = dailyFuelCapacity
       )
     } else {
       // Reflectively invoke the synthetic defaults constructor
@@ -103,8 +142,9 @@ public class PumpRegisterRequestJsonAdapter(
           PumpRegisterRequest::class.java.getDeclaredConstructor(String::class.java,
           String::class.java, String::class.java, String::class.java, String::class.java,
           String::class.java, String::class.java, String::class.java, String::class.java,
-          Int::class.javaPrimitiveType, Util.DEFAULT_CONSTRUCTOR_MARKER).also {
-          this.constructorRef = it }
+          Double::class.javaObjectType, Double::class.javaObjectType, List::class.java,
+          Double::class.javaObjectType, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
       return localConstructor.newInstance(
           pumpName ?: throw Util.missingProperty("pumpName", "pump_name", reader),
           ownerName ?: throw Util.missingProperty("ownerName", "owner_name", reader),
@@ -115,6 +155,10 @@ public class PumpRegisterRequestJsonAdapter(
           pincode ?: throw Util.missingProperty("pincode", "pincode", reader),
           phoneNumber ?: throw Util.missingProperty("phoneNumber", "phone_number", reader),
           email,
+          latitude,
+          longitude,
+          fuelTypes,
+          dailyFuelCapacity,
           mask0,
           /* DefaultConstructorMarker */ null
       )
@@ -144,6 +188,14 @@ public class PumpRegisterRequestJsonAdapter(
     stringAdapter.toJson(writer, value_.phoneNumber)
     writer.name("email")
     nullableStringAdapter.toJson(writer, value_.email)
+    writer.name("latitude")
+    nullableDoubleAdapter.toJson(writer, value_.latitude)
+    writer.name("longitude")
+    nullableDoubleAdapter.toJson(writer, value_.longitude)
+    writer.name("fuel_types")
+    nullableListOfStringAdapter.toJson(writer, value_.fuelTypes)
+    writer.name("daily_fuel_capacity")
+    nullableDoubleAdapter.toJson(writer, value_.dailyFuelCapacity)
     writer.endObject()
   }
 }

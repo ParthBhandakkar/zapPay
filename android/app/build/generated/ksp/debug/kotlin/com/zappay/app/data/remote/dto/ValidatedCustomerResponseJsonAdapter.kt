@@ -24,7 +24,7 @@ public class ValidatedCustomerResponseJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<ValidatedCustomerResponse>() {
   private val options: JsonReader.Options = JsonReader.Options.of("valid", "user_id", "user_name",
-      "user_phone", "wallet_balance", "vehicle_number", "vehicle_type")
+      "user_phone", "wallet_balance", "vehicle_number")
 
   private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
       "valid")
@@ -48,7 +48,6 @@ public class ValidatedCustomerResponseJsonAdapter(
     var userPhone: String? = null
     var walletBalance: Double? = null
     var vehicleNumber: String? = null
-    var vehicleType: String? = null
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -59,7 +58,6 @@ public class ValidatedCustomerResponseJsonAdapter(
         3 -> userPhone = nullableStringAdapter.fromJson(reader)
         4 -> walletBalance = nullableDoubleAdapter.fromJson(reader)
         5 -> vehicleNumber = nullableStringAdapter.fromJson(reader)
-        6 -> vehicleType = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -74,8 +72,7 @@ public class ValidatedCustomerResponseJsonAdapter(
         userName = userName,
         userPhone = userPhone,
         walletBalance = walletBalance,
-        vehicleNumber = vehicleNumber,
-        vehicleType = vehicleType
+        vehicleNumber = vehicleNumber
     )
   }
 
@@ -96,8 +93,6 @@ public class ValidatedCustomerResponseJsonAdapter(
     nullableDoubleAdapter.toJson(writer, value_.walletBalance)
     writer.name("vehicle_number")
     nullableStringAdapter.toJson(writer, value_.vehicleNumber)
-    writer.name("vehicle_type")
-    nullableStringAdapter.toJson(writer, value_.vehicleType)
     writer.endObject()
   }
 }

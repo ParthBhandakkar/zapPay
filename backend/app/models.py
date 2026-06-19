@@ -86,6 +86,7 @@ class User(Base):
     transactions = relationship("Transaction", back_populates="user")
     qr_codes = relationship("QRCode", back_populates="user")
     pump_associations = relationship("PumpOperator", back_populates="user")
+    vehicles = relationship("UserVehicle", back_populates="user")
 
     def __repr__(self):
         return f"<User id={self.id} phone={self.phone_number} role={self.role}>"
@@ -158,6 +159,7 @@ class PetrolPump(Base):
     operators = relationship("PumpOperator", back_populates="pump")
     transactions = relationship("Transaction", back_populates="pump")
     settlements = relationship("Settlement", back_populates="pump")
+    fuel_prices = relationship("PumpFuelPrice", back_populates="pump")
 
     def __repr__(self):
         return f"<PetrolPump id={self.id} name={self.pump_name} city={self.city}>"
@@ -289,6 +291,290 @@ class AuditEvent(Base):
 
     def __repr__(self):
         return f"<AuditEvent id={self.id} action={self.action} resource={self.resource_type}>"
+
+
+class ShiftStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class DisputeStatus(str, enum.Enum):
+    OPEN = "open"
+    INVESTIGATING = "investigating"
+    RESOLVED = "resolved"
+    REJECTED = "rejected"
+
+
+class TicketStatus(str, enum.Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+class TicketPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class AccountType(str, enum.Enum):
+    CUSTOMER_WALLET = "customer_wallet"
+    PUMP_RECEIVABLE = "pump_receivable"
+    ZAPPAY_COMMISSION = "zappay_commission"
+    PAYMENT_GATEWAY = "payment_gateway"
+    REFUND_CLEARING = "refund_clearing"
+    SETTLEMENT_PAYABLE = "settlement_payable"
+    TAX_PAYABLE = "tax_payable"
+
+
+class PumpFuelPrice(Base):
+    __tablename__ = "pump_fuel_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pump_id = Column(Integer, ForeignKey("petrol_pumps.id"))
+    fuel_type = Column(String(50))
+    price = Column(Float, nullable=False)
+    effective_from = Column(DateTime, server_default=func.now())
+    effective_to = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    pump = relationship("PetrolPump", back_populates="fuel_prices")
+
+    def __repr__(self):
+        return f"<PumpFuelPrice id={self.id} pump_id={self.pump_id} fuel={self.fuel_type} price={self.price}>"
+
+
+class PumpDevice(Base):
+    __tablename__ = "pump_devices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pump_id = Column(Integer, ForeignKey("petrol_pumps.id"))
+    device_id = Column(String(255), unique=True)
+    device_name = Column(String(255))
+    is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<PumpDevice id={self.id} device_id={self.device_id}>"
+
+
+class OperatorShift(Base):
+    __tablename__ = "operator_shifts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pump_id = Column(Integer, ForeignKey("petrol_pumps.id"))
+    operator_id = Column(Integer, ForeignKey("users.id"))
+    shift_type = Column(String(50))
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=True)
+    status = Column(Enum(ShiftStatus), default=ShiftStatus.ACTIVE)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<OperatorShift id={self.id} pump_id={self.pump_id} status={self.status}>"
+
+
+class UserVehicle(Base):
+    __tablename__ = "user_vehicles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    vehicle_number = Column(String(20), nullable=False)
+    vehicle_type = Column(String(50))
+    nickname = Column(String(100))
+    is_primary = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+    user = relationship("User", back_populates="vehicles")
+
+    def __repr__(self):
+        return f"<UserVehicle id={self.id} user_id={self.user_id} vehicle={self.vehicle_number}>"
+
+
+class PumpInventory(Base):
+    __tablename__ = "pump_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pump_id = Column(Integer, ForeignKey("petrol_pumps.id"))
+    fuel_type = Column(String(50), nullable=False)
+    current_stock = Column(Float, default=0.0)
+    max_capacity = Column(Float, default=0.0)
+    last_updated = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<PumpInventory id={self.id} pump_id={self.pump_id} fuel={self.fuel_type}>"
+
+
+class Dispute(Base):
+    __tablename__ = "disputes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(String(100), ForeignKey("transactions.transaction_id"))
+    customer_id = Column(Integer, ForeignKey("users.id"))
+    reason = Column(Text, nullable=False)
+    description = Column(Text)
+    status = Column(Enum(DisputeStatus), default=DisputeStatus.OPEN)
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolution_notes = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+    resolved_at = Column(DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<Dispute id={self.id} txn={self.transaction_id} status={self.status}>"
+
+
+class NotificationEvent(Base):
+    __tablename__ = "notification_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    notification_type = Column(String(50))
+    title = Column(String(255))
+    body = Column(Text)
+    is_read = Column(Boolean, default=False)
+    is_sent = Column(Boolean, default=False)
+    sent_at = Column(DateTime, nullable=True)
+    read_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<NotificationEvent id={self.id} user_id={self.user_id} type={self.notification_type}>"
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    subject = Column(String(255), nullable=False)
+    description = Column(Text)
+    category = Column(String(50))
+    priority = Column(Enum(TicketPriority), default=TicketPriority.MEDIUM)
+    status = Column(Enum(TicketStatus), default=TicketStatus.OPEN)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolution = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+    resolved_at = Column(DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<SupportTicket id={self.id} user_id={self.user_id} subject={self.subject} status={self.status}>"
+
+
+class FraudRule(Base):
+    __tablename__ = "fraud_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    rule_type = Column(String(50))
+    rule_config = Column(Text)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
+
+    def __repr__(self):
+        return f"<FraudRule id={self.id} name={self.name} type={self.rule_type}>"
+
+
+class BlacklistEntry(Base):
+    __tablename__ = "blacklist_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    pump_id = Column(Integer, ForeignKey("petrol_pumps.id"), nullable=True)
+    reason = Column(Text, nullable=False)
+    blacklisted_by = Column(Integer, ForeignKey("users.id"))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<BlacklistEntry id={self.id} reason={self.reason[:30]}>"
+
+
+class LedgerAccount(Base):
+    __tablename__ = "ledger_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_type = Column(Enum(AccountType), nullable=False)
+    account_id = Column(Integer)
+    balance = Column(Float, default=0.0)
+    currency = Column(String(3), default="INR")
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<LedgerAccount id={self.id} type={self.account_type} balance={self.balance}>"
+
+
+class LedgerEntry(Base):
+    __tablename__ = "ledger_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ledger_account_id = Column(Integer, ForeignKey("ledger_accounts.id"))
+    transaction_id = Column(String(100), ForeignKey("transactions.transaction_id"), nullable=True)
+    entry_type = Column(String(20))
+    amount = Column(Float, nullable=False)
+    balance_before = Column(Float)
+    balance_after = Column(Float)
+    description = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+
+    account = relationship("LedgerAccount")
+
+    def __repr__(self):
+        return f"<LedgerEntry id={self.id} type={self.entry_type} amount={self.amount}>"
+
+
+class FleetAccount(Base):
+    __tablename__ = "fleet_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(String(255), nullable=False)
+    admin_user_id = Column(Integer, ForeignKey("users.id"))
+    monthly_budget = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<FleetAccount id={self.id} company={self.company_name}>"
+
+
+class FleetVehicle(Base):
+    __tablename__ = "fleet_vehicles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fleet_id = Column(Integer, ForeignKey("fleet_accounts.id"))
+    vehicle_number = Column(String(20), nullable=False)
+    fuel_type = Column(String(50))
+    monthly_fuel_limit = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+
+    def __repr__(self):
+        return f"<FleetVehicle id={self.id} fleet_id={self.fleet_id} vehicle={self.vehicle_number}>"
+
+
+class FleetDriver(Base):
+    __tablename__ = "fleet_drivers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fleet_id = Column(Integer, ForeignKey("fleet_accounts.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    daily_limit = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+
+    def __repr__(self):
+        return f"<FleetDriver id={self.id} fleet_id={self.fleet_id} user_id={self.user_id}>"
 
 
 class OTP(Base):

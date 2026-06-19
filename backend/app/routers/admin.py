@@ -16,6 +16,18 @@ from app.models import (
 )
 from app.services.payment import calculate_pump_settlement, refund_transaction
 from app.services.audit import log_audit_event
+from app.models import (
+    Dispute, DisputeStatus, SupportTicket, TicketStatus, TicketPriority,
+    FraudRule, BlacklistEntry, NotificationEvent, FleetAccount, FleetVehicle, FleetDriver,
+    PumpFuelPrice, PumpInventory, UserVehicle
+)
+from app.schemas import (
+    DisputeResponse, DisputeCreate, SupportTicketResponse, SupportTicketCreate,
+    FraudRuleResponse, FraudRuleCreate, BlacklistEntryResponse, BlacklistCreate,
+    NotificationEventResponse, PumpFuelPriceResponse, PumpInventoryResponse,
+    UserVehicleResponse, FleetAccountResponse, FleetAccountCreate,
+    FleetVehicleResponse, FleetVehicleCreate, FleetDriverResponse, FleetDriverAdd
+)
 
 router = APIRouter()
 security = HTTPBearer()
@@ -583,4 +595,288 @@ async def get_revenue_analytics(
         "total_transactions": total_transactions,
         "average_daily_revenue": total_revenue / days if days > 0 else 0,
         "daily_data": analytics_data
-    } 
+    }
+
+# ── Extended Dashboard ──
+
+@router.get("/dashboard/extended")
+async def get_extended_dashboard(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    from sqlalchemy import func
+    total_users = db.query(User).count()
+    total_pumps = db.query(PetrolPump).count()
+    total_transactions = db.query(Transaction).count()
+    total_revenue = db.query(func.sum(Transaction.amount)).filter(Transaction.status == TransactionStatus.COMPLETED).scalar() or 0.0
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    transactions_today = db.query(Transaction).filter(Transaction.created_at >= today_start).count()
+    revenue_today = db.query(func.sum(Transaction.amount)).filter(Transaction.status == TransactionStatus.COMPLETED, Transaction.completed_at >= today_start).scalar() or 0.0
+    pending_approvals = db.query(PetrolPump).filter(PetrolPump.is_verified == False, PetrolPump.is_active == True).count()
+    open_disputes = db.query(Dispute).filter(Dispute.status == DisputeStatus.OPEN).count()
+    pending_refunds = db.query(RefundRequest).filter(RefundRequest.status == RefundStatus.REQUESTED).count()
+    open_tickets = db.query(SupportTicket).filter(SupportTicket.status == TicketStatus.OPEN).count()
+    pending_settlements = db.query(Settlement).filter(Settlement.status == SettlementStatus.PENDING).count()
+    return {
+        "total_users": total_users,
+        "total_pumps": total_pumps,
+        "total_transactions": total_transactions,
+        "total_revenue": total_revenue,
+        "transactions_today": transactions_today,
+        "revenue_today": revenue_today,
+        "pending_pump_approvals": pending_approvals,
+        "open_disputes": open_disputes,
+        "pending_refund_requests": pending_refunds,
+        "open_support_tickets": open_tickets,
+        "pending_settlements": pending_settlements,
+    }
+
+# ── Disputes ──
+
+@router.get("/disputes")
+async def get_disputes(
+    status: Optional[DisputeStatus] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    query = db.query(Dispute)
+    if status:
+        query = query.filter(Dispute.status == status)
+    total = query.count()
+    disputes = query.order_by(Dispute.created_at.desc()).offset((page-1)*page_size).limit(page_size).all()
+    return {"disputes": disputes, "total_count": total, "page": page, "page_size": page_size}
+
+@router.post("/disputes/{dispute_id}/resolve", response_model=BaseResponse)
+async def resolve_dispute(
+    dispute_id: int,
+    resolution: str,
+    approve: bool,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    dispute = db.query(Dispute).filter(Dispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    dispute.status = DisputeStatus.RESOLVED if approve else DisputeStatus.REJECTED
+    dispute.resolved_by = admin_user.id
+    dispute.resolution_notes = resolution
+    dispute.resolved_at = datetime.utcnow()
+    db.commit()
+    return BaseResponse(success=True, message=f"Dispute {'resolved' if approve else 'rejected'}")
+
+# ── Fraud Rules ──
+
+@router.get("/fraud-rules")
+async def get_fraud_rules(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    rules = db.query(FraudRule).order_by(FraudRule.name).all()
+    return {"fraud_rules": rules}
+
+@router.post("/fraud-rules", response_model=BaseResponse)
+async def create_fraud_rule(
+    rule_data: FraudRuleCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    rule = FraudRule(name=rule_data.name, rule_type=rule_data.rule_type, rule_config=rule_data.rule_config, created_by=admin_user.id)
+    db.add(rule)
+    db.commit()
+    return BaseResponse(success=True, message="Fraud rule created")
+
+@router.post("/fraud-rules/{rule_id}/toggle", response_model=BaseResponse)
+async def toggle_fraud_rule(
+    rule_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    rule = db.query(FraudRule).filter(FraudRule.id == rule_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    rule.is_active = not rule.is_active
+    db.commit()
+    return BaseResponse(success=True, message=f"Rule {'activated' if rule.is_active else 'deactivated'}")
+
+# ── Blacklist ──
+
+@router.get("/blacklist")
+async def get_blacklist(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    entries = db.query(BlacklistEntry).filter(BlacklistEntry.is_active == True).order_by(BlacklistEntry.created_at.desc()).all()
+    return {"blacklist": entries}
+
+@router.post("/blacklist", response_model=BaseResponse)
+async def add_blacklist_entry(
+    entry: BlacklistCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    be = BlacklistEntry(user_id=entry.user_id, pump_id=entry.pump_id, reason=entry.reason, blacklisted_by=admin_user.id)
+    db.add(be)
+    db.commit()
+    return BaseResponse(success=True, message="Blacklist entry added")
+
+@router.delete("/blacklist/{entry_id}", response_model=BaseResponse)
+async def remove_blacklist_entry(
+    entry_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    entry = db.query(BlacklistEntry).filter(BlacklistEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    entry.is_active = False
+    db.commit()
+    return BaseResponse(success=True, message="Blacklist entry removed")
+
+# ── Support Tickets ──
+
+@router.get("/support-tickets")
+async def get_support_tickets(
+    status: Optional[TicketStatus] = None,
+    priority: Optional[TicketPriority] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    query = db.query(SupportTicket)
+    if status:
+        query = query.filter(SupportTicket.status == status)
+    if priority:
+        query = query.filter(SupportTicket.priority == priority)
+    total = query.count()
+    tickets = query.order_by(SupportTicket.created_at.desc()).offset((page-1)*page_size).limit(page_size).all()
+    return {"tickets": tickets, "total_count": total, "page": page, "page_size": page_size}
+
+@router.post("/support-tickets/{ticket_id}/assign", response_model=BaseResponse)
+async def assign_ticket(
+    ticket_id: int,
+    assignee_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    ticket.assigned_to = assignee_id
+    ticket.status = TicketStatus.IN_PROGRESS
+    db.commit()
+    return BaseResponse(success=True, message="Ticket assigned")
+
+@router.post("/support-tickets/{ticket_id}/resolve", response_model=BaseResponse)
+async def resolve_ticket(
+    ticket_id: int,
+    resolution: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    ticket.status = TicketStatus.RESOLVED
+    ticket.resolution = resolution
+    ticket.resolved_at = datetime.utcnow()
+    db.commit()
+    return BaseResponse(success=True, message="Ticket resolved")
+
+# ── Fleet Management ──
+
+@router.get("/fleet-accounts")
+async def get_fleet_accounts(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    query = db.query(FleetAccount)
+    total = query.count()
+    accounts = query.order_by(FleetAccount.created_at.desc()).offset((page-1)*page_size).limit(page_size).all()
+    return {"fleet_accounts": accounts, "total_count": total, "page": page, "page_size": page_size}
+
+@router.post("/fleet-accounts", response_model=BaseResponse)
+async def create_fleet_account(
+    account_data: FleetAccountCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    account = FleetAccount(company_name=account_data.company_name, admin_user_id=admin_user.id, monthly_budget=account_data.monthly_budget)
+    db.add(account)
+    db.commit()
+    return BaseResponse(success=True, message="Fleet account created")
+
+@router.get("/fleet-accounts/{fleet_id}")
+async def get_fleet_detail(
+    fleet_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    verify_admin_access(user)
+    account = db.query(FleetAccount).filter(FleetAccount.id == fleet_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Fleet account not found")
+    vehicles = db.query(FleetVehicle).filter(FleetVehicle.fleet_id == fleet_id).all()
+    drivers = db.query(FleetDriver).filter(FleetDriver.fleet_id == fleet_id).all()
+    return {"account": account, "vehicles": vehicles, "drivers": drivers}
+
+@router.post("/fleet-accounts/{fleet_id}/vehicles", response_model=BaseResponse)
+async def add_fleet_vehicle(
+    fleet_id: int,
+    vehicle_data: FleetVehicleCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    v = FleetVehicle(fleet_id=fleet_id, vehicle_number=vehicle_data.vehicle_number, fuel_type=vehicle_data.fuel_type, monthly_fuel_limit=vehicle_data.monthly_fuel_limit)
+    db.add(v)
+    db.commit()
+    return BaseResponse(success=True, message="Fleet vehicle added")
+
+@router.post("/fleet-accounts/{fleet_id}/drivers", response_model=BaseResponse)
+async def add_fleet_driver(
+    fleet_id: int,
+    driver_data: FleetDriverAdd,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+    d = FleetDriver(fleet_id=fleet_id, user_id=driver_data.user_id, daily_limit=driver_data.daily_limit)
+    db.add(d)
+    db.commit()
+    return BaseResponse(success=True, message="Fleet driver added") 

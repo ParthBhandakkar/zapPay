@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from typing import List
+from datetime import datetime
 
 from app.database import get_db
-from app.schemas import UserProfile, UserUpdate, KYCSubmission, BaseResponse, UserDashboard, AutoRechargeSettings
+from app.schemas import UserProfile, UserUpdate, KYCSubmission, BaseResponse, UserDashboard, AutoRechargeSettings, UserVehicleCreate, UserVehicleResponse, UserVehicleUpdate, SupportTicketCreate, SupportTicketResponse
 from app.services.auth import get_current_user
 from app.services.payment import get_wallet_summary
-from app.models import User, KYCStatus
+from app.models import User, KYCStatus, UserVehicle, SupportTicket, NotificationEvent
 
 router = APIRouter()
 security = HTTPBearer()
@@ -158,4 +160,109 @@ async def update_auto_recharge_settings(
 	user.auto_recharge_amount = settings_payload.amount
 	user.auto_recharge_payment_method = settings_payload.payment_method
 	db.commit()
-	return BaseResponse(success=True, message="Auto-recharge settings updated") 
+	return BaseResponse(success=True, message="Auto-recharge settings updated")
+
+# ── Multi-Vehicle ──
+
+@router.get("/vehicles", response_model=List[UserVehicleResponse])
+async def get_my_vehicles(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    vehicles = db.query(UserVehicle).filter(UserVehicle.user_id == user.id, UserVehicle.is_active == True).all()
+    return vehicles
+
+@router.post("/vehicles", response_model=BaseResponse)
+async def add_vehicle(
+    vehicle_data: UserVehicleCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    if vehicle_data.is_primary:
+        db.query(UserVehicle).filter(UserVehicle.user_id == user.id).update({"is_primary": False})
+    vehicle = UserVehicle(user_id=user.id, **vehicle_data.dict())
+    db.add(vehicle)
+    db.commit()
+    return BaseResponse(success=True, message="Vehicle added")
+
+@router.put("/vehicles/{vehicle_id}", response_model=BaseResponse)
+async def update_vehicle(
+    vehicle_id: int,
+    vehicle_data: UserVehicleUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    vehicle = db.query(UserVehicle).filter(UserVehicle.id == vehicle_id, UserVehicle.user_id == user.id).first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    if vehicle_data.is_primary:
+        db.query(UserVehicle).filter(UserVehicle.user_id == user.id).update({"is_primary": False})
+    for field, value in vehicle_data.dict(exclude_unset=True).items():
+        setattr(vehicle, field, value)
+    db.commit()
+    return BaseResponse(success=True, message="Vehicle updated")
+
+@router.delete("/vehicles/{vehicle_id}", response_model=BaseResponse)
+async def remove_vehicle(
+    vehicle_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    vehicle = db.query(UserVehicle).filter(UserVehicle.id == vehicle_id, UserVehicle.user_id == user.id).first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    vehicle.is_active = False
+    db.commit()
+    return BaseResponse(success=True, message="Vehicle removed")
+
+# ── Support Tickets (customer-facing) ──
+
+@router.post("/support-tickets", response_model=BaseResponse)
+async def create_support_ticket(
+    ticket_data: SupportTicketCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    ticket = SupportTicket(user_id=user.id, **ticket_data.dict())
+    db.add(ticket)
+    db.commit()
+    return BaseResponse(success=True, message="Support ticket created")
+
+@router.get("/support-tickets")
+async def get_my_tickets(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    tickets = db.query(SupportTicket).filter(SupportTicket.user_id == user.id).order_by(SupportTicket.created_at.desc()).all()
+    return {"tickets": tickets}
+
+# ── Notifications ──
+
+@router.get("/notifications")
+async def get_my_notifications(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    notifs = db.query(NotificationEvent).filter(NotificationEvent.user_id == user.id).order_by(NotificationEvent.created_at.desc()).limit(50).all()
+    return {"notifications": notifs}
+
+@router.post("/notifications/{notif_id}/read", response_model=BaseResponse)
+async def mark_notification_read(
+    notif_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    notif = db.query(NotificationEvent).filter(NotificationEvent.id == notif_id, NotificationEvent.user_id == user.id).first()
+    if notif:
+        notif.is_read = True
+        notif.read_at = datetime.utcnow()
+        db.commit()
+    return BaseResponse(success=True, message="Notification marked as read") 

@@ -12,6 +12,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
 import kotlin.Boolean
+import kotlin.Double
 import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
@@ -23,15 +24,23 @@ public class PumpResponseJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PumpResponse>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "pump_name", "owner_name",
-      "address", "city", "state", "phone_number", "is_active", "is_verified")
+      "license_number", "address", "city", "state", "pincode", "phone_number", "email", "latitude",
+      "longitude", "fuel_types", "fuel_rates", "is_open", "is_active", "is_verified",
+      "commission_rate")
 
   private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(), "id")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "pumpName")
 
-  private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
-      "isActive")
+  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
+      emptySet(), "email")
+
+  private val nullableDoubleAdapter: JsonAdapter<Double?> =
+      moshi.adapter(Double::class.javaObjectType, emptySet(), "latitude")
+
+  private val nullableBooleanAdapter: JsonAdapter<Boolean?> =
+      moshi.adapter(Boolean::class.javaObjectType, emptySet(), "isOpen")
 
   public override fun toString(): String = buildString(34) {
       append("GeneratedJsonAdapter(").append("PumpResponse").append(')') }
@@ -40,12 +49,21 @@ public class PumpResponseJsonAdapter(
     var id: Int? = null
     var pumpName: String? = null
     var ownerName: String? = null
+    var licenseNumber: String? = null
     var address: String? = null
     var city: String? = null
     var state: String? = null
+    var pincode: String? = null
     var phoneNumber: String? = null
+    var email: String? = null
+    var latitude: Double? = null
+    var longitude: Double? = null
+    var fuelTypes: String? = null
+    var fuelRates: String? = null
+    var isOpen: Boolean? = null
     var isActive: Boolean? = null
     var isVerified: Boolean? = null
+    var commissionRate: Double? = null
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -54,18 +72,27 @@ public class PumpResponseJsonAdapter(
             "pump_name", reader)
         2 -> ownerName = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("ownerName",
             "owner_name", reader)
-        3 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
+        3 -> licenseNumber = stringAdapter.fromJson(reader) ?:
+            throw Util.unexpectedNull("licenseNumber", "license_number", reader)
+        4 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
             "address", reader)
-        4 -> city = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("city", "city",
+        5 -> city = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("city", "city",
             reader)
-        5 -> state = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("state", "state",
+        6 -> state = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("state", "state",
             reader)
-        6 -> phoneNumber = stringAdapter.fromJson(reader) ?:
+        7 -> pincode = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("pincode",
+            "pincode", reader)
+        8 -> phoneNumber = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("phoneNumber", "phone_number", reader)
-        7 -> isActive = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("isActive",
-            "is_active", reader)
-        8 -> isVerified = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("isVerified",
-            "is_verified", reader)
+        9 -> email = nullableStringAdapter.fromJson(reader)
+        10 -> latitude = nullableDoubleAdapter.fromJson(reader)
+        11 -> longitude = nullableDoubleAdapter.fromJson(reader)
+        12 -> fuelTypes = nullableStringAdapter.fromJson(reader)
+        13 -> fuelRates = nullableStringAdapter.fromJson(reader)
+        14 -> isOpen = nullableBooleanAdapter.fromJson(reader)
+        15 -> isActive = nullableBooleanAdapter.fromJson(reader)
+        16 -> isVerified = nullableBooleanAdapter.fromJson(reader)
+        17 -> commissionRate = nullableDoubleAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -78,13 +105,23 @@ public class PumpResponseJsonAdapter(
         id = id ?: throw Util.missingProperty("id", "id", reader),
         pumpName = pumpName ?: throw Util.missingProperty("pumpName", "pump_name", reader),
         ownerName = ownerName ?: throw Util.missingProperty("ownerName", "owner_name", reader),
+        licenseNumber = licenseNumber ?: throw Util.missingProperty("licenseNumber",
+            "license_number", reader),
         address = address ?: throw Util.missingProperty("address", "address", reader),
         city = city ?: throw Util.missingProperty("city", "city", reader),
         state = state ?: throw Util.missingProperty("state", "state", reader),
+        pincode = pincode ?: throw Util.missingProperty("pincode", "pincode", reader),
         phoneNumber = phoneNumber ?: throw Util.missingProperty("phoneNumber", "phone_number",
             reader),
-        isActive = isActive ?: throw Util.missingProperty("isActive", "is_active", reader),
-        isVerified = isVerified ?: throw Util.missingProperty("isVerified", "is_verified", reader)
+        email = email,
+        latitude = latitude,
+        longitude = longitude,
+        fuelTypes = fuelTypes,
+        fuelRates = fuelRates,
+        isOpen = isOpen,
+        isActive = isActive,
+        isVerified = isVerified,
+        commissionRate = commissionRate
     )
   }
 
@@ -99,18 +136,36 @@ public class PumpResponseJsonAdapter(
     stringAdapter.toJson(writer, value_.pumpName)
     writer.name("owner_name")
     stringAdapter.toJson(writer, value_.ownerName)
+    writer.name("license_number")
+    stringAdapter.toJson(writer, value_.licenseNumber)
     writer.name("address")
     stringAdapter.toJson(writer, value_.address)
     writer.name("city")
     stringAdapter.toJson(writer, value_.city)
     writer.name("state")
     stringAdapter.toJson(writer, value_.state)
+    writer.name("pincode")
+    stringAdapter.toJson(writer, value_.pincode)
     writer.name("phone_number")
     stringAdapter.toJson(writer, value_.phoneNumber)
+    writer.name("email")
+    nullableStringAdapter.toJson(writer, value_.email)
+    writer.name("latitude")
+    nullableDoubleAdapter.toJson(writer, value_.latitude)
+    writer.name("longitude")
+    nullableDoubleAdapter.toJson(writer, value_.longitude)
+    writer.name("fuel_types")
+    nullableStringAdapter.toJson(writer, value_.fuelTypes)
+    writer.name("fuel_rates")
+    nullableStringAdapter.toJson(writer, value_.fuelRates)
+    writer.name("is_open")
+    nullableBooleanAdapter.toJson(writer, value_.isOpen)
     writer.name("is_active")
-    booleanAdapter.toJson(writer, value_.isActive)
+    nullableBooleanAdapter.toJson(writer, value_.isActive)
     writer.name("is_verified")
-    booleanAdapter.toJson(writer, value_.isVerified)
+    nullableBooleanAdapter.toJson(writer, value_.isVerified)
+    writer.name("commission_rate")
+    nullableDoubleAdapter.toJson(writer, value_.commissionRate)
     writer.endObject()
   }
 }

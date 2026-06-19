@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 
 from app.database import get_db
 from app.schemas import (
@@ -13,9 +14,12 @@ from app.schemas import (
     PetrolPumpResponse,
     PetrolPumpUpdate,
     PumpDashboard,
+    PumpFuelPriceCreate,
+    PumpDeviceRegister,
+    ShiftStartRequest,
 )
 from app.services.auth import get_current_user
-from app.models import PetrolPump, PumpOperator, Settlement, Transaction, TransactionStatus, User, UserRole
+from app.models import PetrolPump, PumpDevice, PumpFuelPrice, PumpInventory, PumpOperator, OperatorShift, Settlement, ShiftStatus, Transaction, TransactionStatus, User, UserRole, UserVehicle
 
 logger = logging.getLogger("zappay.routers.pumps")
 
@@ -317,7 +321,6 @@ async def get_pump_dashboard(
     
     # Get statistics
     from sqlalchemy import func
-    from datetime import datetime, timedelta
     
     # Total transactions
     total_transactions = db.query(Transaction).filter(
@@ -449,4 +452,155 @@ async def get_pump_settlements(
 	query = db.query(Settlement).filter(Settlement.pump_id == pump_id)
 	total = query.count()
 	settlements = query.order_by(Settlement.settlement_date.desc()).offset((page-1)*page_size).limit(page_size).all()
-	return {"settlements": settlements, "total_count": total, "page": page, "page_size": page_size, "total_pages": (total + page_size - 1)//page_size} 
+	return {"settlements": settlements, "total_count": total, "page": page, "page_size": page_size, "total_pages": (total + page_size - 1)//page_size}
+
+@router.get("/{pump_id}/fuel-prices")
+async def get_pump_fuel_prices(pump_id: int, db: Session = Depends(get_db)):
+    prices = db.query(PumpFuelPrice).filter(
+        PumpFuelPrice.pump_id == pump_id,
+        PumpFuelPrice.is_active == True
+    ).order_by(PumpFuelPrice.fuel_type).all()
+    return {"fuel_prices": prices}
+
+@router.post("/{pump_id}/fuel-prices", response_model=BaseResponse)
+async def set_pump_fuel_price(
+    pump_id: int,
+    price_data: PumpFuelPriceCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    old = db.query(PumpFuelPrice).filter(
+        PumpFuelPrice.pump_id == pump_id,
+        PumpFuelPrice.fuel_type == price_data.fuel_type,
+        PumpFuelPrice.is_active == True
+    ).all()
+    for p in old:
+        p.is_active = False
+        p.effective_to = datetime.utcnow()
+    new_price = PumpFuelPrice(
+        pump_id=pump_id,
+        fuel_type=price_data.fuel_type,
+        price=price_data.price,
+    )
+    db.add(new_price)
+    db.commit()
+    return BaseResponse(success=True, message="Fuel price updated")
+
+@router.post("/{pump_id}/devices/register", response_model=BaseResponse)
+async def register_pump_device(
+    pump_id: int,
+    device_data: PumpDeviceRegister,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    existing = db.query(PumpDevice).filter(PumpDevice.device_id == device_data.device_id).first()
+    if existing:
+        existing.last_seen = datetime.utcnow()
+        existing.is_active = True
+        db.commit()
+        return BaseResponse(success=True, message="Device already registered, updated")
+    device = PumpDevice(pump_id=pump_id, device_id=device_data.device_id, device_name=device_data.device_name)
+    db.add(device)
+    db.commit()
+    return BaseResponse(success=True, message="Device registered")
+
+@router.get("/{pump_id}/devices")
+async def get_pump_devices(pump_id: int, db: Session = Depends(get_db)):
+    devices = db.query(PumpDevice).filter(PumpDevice.pump_id == pump_id).order_by(PumpDevice.last_seen.desc()).all()
+    return {"devices": devices}
+
+@router.post("/{pump_id}/shifts/start", response_model=BaseResponse)
+async def start_shift(
+    pump_id: int,
+    shift_data: ShiftStartRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    active = db.query(OperatorShift).filter(
+        OperatorShift.operator_id == user.id,
+        OperatorShift.status == ShiftStatus.ACTIVE
+    ).first()
+    if active:
+        return BaseResponse(success=False, message="Already have an active shift")
+    shift = OperatorShift(
+        pump_id=pump_id, operator_id=user.id,
+        shift_type=shift_data.shift_type, start_time=datetime.utcnow(),
+        notes=shift_data.notes, status=ShiftStatus.ACTIVE
+    )
+    db.add(shift)
+    db.commit()
+    return BaseResponse(success=True, message="Shift started")
+
+@router.post("/{pump_id}/shifts/end", response_model=BaseResponse)
+async def end_shift(
+    pump_id: int,
+    notes: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    shift = db.query(OperatorShift).filter(
+        OperatorShift.operator_id == user.id,
+        OperatorShift.pump_id == pump_id,
+        OperatorShift.status == ShiftStatus.ACTIVE
+    ).first()
+    if not shift:
+        raise HTTPException(status_code=404, detail="No active shift")
+    shift.end_time = datetime.utcnow()
+    shift.status = ShiftStatus.COMPLETED
+    if notes:
+        shift.notes = notes
+    db.commit()
+    return BaseResponse(success=True, message="Shift ended")
+
+@router.get("/{pump_id}/shifts")
+async def get_shifts(
+    pump_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    query = db.query(OperatorShift).filter(OperatorShift.pump_id == pump_id)
+    total = query.count()
+    shifts = query.order_by(OperatorShift.start_time.desc()).offset((page-1)*page_size).limit(page_size).all()
+    result = []
+    for s in shifts:
+        d = {c.name: getattr(s, c.name) for c in s.__table__.columns}
+        if s.operator_id:
+            op_user = db.query(User).filter(User.id == s.operator_id).first()
+            d["operator_name"] = op_user.full_name if op_user else None
+        result.append(d)
+    return {"shifts": result, "total_count": total, "page": page, "page_size": page_size}
+
+@router.get("/{pump_id}/inventory")
+async def get_inventory(pump_id: int, db: Session = Depends(get_db)):
+    items = db.query(PumpInventory).filter(PumpInventory.pump_id == pump_id).all()
+    return {"inventory": items}
+
+@router.post("/{pump_id}/inventory", response_model=BaseResponse)
+async def update_inventory(
+    pump_id: int,
+    fuel_type: str,
+    current_stock: float,
+    max_capacity: Optional[float] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(db, credentials.credentials)
+    inv = db.query(PumpInventory).filter(
+        PumpInventory.pump_id == pump_id,
+        PumpInventory.fuel_type == fuel_type
+    ).first()
+    if inv:
+        inv.current_stock = current_stock
+        if max_capacity:
+            inv.max_capacity = max_capacity
+        inv.last_updated = datetime.utcnow()
+    else:
+        inv = PumpInventory(pump_id=pump_id, fuel_type=fuel_type, current_stock=current_stock, max_capacity=max_capacity or 0)
+        db.add(inv)
+    db.commit()
+    return BaseResponse(success=True, message="Inventory updated")

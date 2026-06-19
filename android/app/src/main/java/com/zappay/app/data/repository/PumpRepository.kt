@@ -93,6 +93,66 @@ class PumpRepository @Inject constructor(
         }
     }
 
+    suspend fun getNearbyPumps(latitude: Double, longitude: Double, radiusKm: Double = 10.0): Resource<NearbyPumpsResponse> {
+        return try {
+            val response = api.getNearbyPumps(latitude, longitude, radiusKm)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load nearby pumps")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getFuelPrices(pumpId: Int): Resource<FuelPricesResponse> {
+        return try {
+            val response = api.getPumpFuelPrices(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load fuel prices")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getPumpShifts(pumpId: Int): Resource<ShiftsResponse> {
+        return try {
+            val response = api.getPumpShifts(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load shifts")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun startShift(pumpId: Int, shiftType: String = "morning"): Resource<GenericResponse> {
+        return try {
+            val response = api.startShift(pumpId, ShiftStartRequest(shiftType))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to start shift")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun endShift(pumpId: Int): Resource<GenericResponse> {
+        return try {
+            val response = api.endShift(pumpId, mapOf("notes" to ""))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to end shift")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getInventory(pumpId: Int): Resource<PumpInventoryResponse> {
+        return try {
+            val response = api.getPumpInventory(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load inventory")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
     suspend fun getSettings(pumpId: Int): Resource<PumpSettingsResponse> {
         return try {
             val response = api.getPumpSettings(pumpId)
