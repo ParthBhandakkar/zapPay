@@ -2,6 +2,7 @@ package com.zappay.app.ui.customer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zappay.app.data.local.TokenManager
 import com.zappay.app.data.remote.dto.TransactionDto
 import com.zappay.app.data.repository.QRRepository
 import com.zappay.app.data.repository.TransactionRepository
@@ -24,6 +25,8 @@ data class CustomerUiState(
     val qrExpiresAt: String? = null,
     val error: String? = null,
     val rechargeSuccess: Boolean = false,
+    val vehicleNumber: String = "",
+    val vehicleType: String = "",
 )
 
 @HiltViewModel
@@ -31,6 +34,7 @@ class CustomerViewModel @Inject constructor(
     private val walletRepository: WalletRepository,
     private val transactionRepository: TransactionRepository,
     private val qrRepository: QRRepository,
+    private val tokenManager: TokenManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CustomerUiState())
@@ -41,7 +45,23 @@ class CustomerViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             loadWalletSummary()
             loadTransactions()
+            loadVehicleInfo()
             _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+
+    fun loadVehicleInfo() {
+        viewModelScope.launch {
+            val vn = tokenManager.getVehicleNumber() ?: ""
+            val vt = tokenManager.getVehicleType() ?: ""
+            _uiState.value = _uiState.value.copy(vehicleNumber = vn, vehicleType = vt)
+        }
+    }
+
+    fun saveVehicleInfo(vehicleNumber: String, vehicleType: String) {
+        viewModelScope.launch {
+            tokenManager.saveVehicleInfo(vehicleNumber, vehicleType)
+            _uiState.value = _uiState.value.copy(vehicleNumber = vehicleNumber, vehicleType = vehicleType)
         }
     }
 

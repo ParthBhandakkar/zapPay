@@ -1,7 +1,7 @@
 package com.zappay.app.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -25,6 +25,7 @@ object Routes {
     const val PUMP_SCANNER = "pump_scanner"
     const val PUMP_SETTINGS = "pump_settings"
     const val SETUP_PUMP = "setup_pump"
+    const val PUMP_PROFILE = "pump_profile"
 
     fun loginRoute(role: String) = "login/$role"
 }
@@ -34,14 +35,25 @@ fun ZapPayNavGraph(
     navController: NavHostController,
     startDestination: String = Routes.WELCOME,
 ) {
-    val authViewModel: AuthViewModel = viewModel()
+    val authViewModel: AuthViewModel = hiltViewModel()
 
     NavHost(navController = navController, startDestination = startDestination) {
         // ── Welcome ──
         composable(Routes.WELCOME) {
             WelcomeScreen(
                 onCustomerClick = { navController.navigate(Routes.loginRoute("customer")) },
-                onPumpClick = { navController.navigate(Routes.loginRoute("pump_operator")) },
+                onPumpClick = { navController.navigate(Routes.loginRoute("pump_owner")) },
+                onDirectToCustomer = {
+                    navController.navigate(Routes.CUSTOMER_DASHBOARD) {
+                        popUpTo(Routes.WELCOME) { inclusive = true }
+                    }
+                },
+                onDirectToPump = {
+                    navController.navigate(Routes.PUMP_DASHBOARD) {
+                        popUpTo(Routes.WELCOME) { inclusive = true }
+                    }
+                },
+                authViewModel = authViewModel,
             )
         }
 
@@ -74,30 +86,32 @@ fun ZapPayNavGraph(
 
         // ── Customer ──
         composable(Routes.CUSTOMER_DASHBOARD) {
-            val vm: CustomerViewModel = viewModel()
+            val vm: CustomerViewModel = hiltViewModel()
             CustomerDashboardScreen(
                 viewModel = vm,
                 onNavigateToWallet = { navController.navigate(Routes.CUSTOMER_WALLET) },
                 onNavigateToQR = { navController.navigate(Routes.CUSTOMER_QR) },
+                onNavigateToProfile = { navController.navigate(Routes.CUSTOMER_PROFILE) },
             )
         }
 
         composable(Routes.CUSTOMER_WALLET) {
-            val vm: CustomerViewModel = viewModel()
+            val vm: CustomerViewModel = hiltViewModel()
             WalletScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.CUSTOMER_QR) {
-            val vm: CustomerViewModel = viewModel()
+            val vm: CustomerViewModel = hiltViewModel()
             QRCodeScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.CUSTOMER_HISTORY) {
-            val vm: CustomerViewModel = viewModel()
+            val vm: CustomerViewModel = hiltViewModel()
             HistoryScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.CUSTOMER_PROFILE) {
+            val vm: CustomerViewModel = hiltViewModel()
             ProfileScreen(
                 userName = null,
                 userPhone = null,
@@ -108,32 +122,34 @@ fun ZapPayNavGraph(
                     }
                 },
                 onBack = { navController.popBackStack() },
+                viewModel = vm,
             )
         }
 
         // ── Pump ──
         composable(Routes.PUMP_DASHBOARD) {
-            val vm: PumpViewModel = viewModel()
+            val vm: PumpViewModel = hiltViewModel()
             PumpDashboardScreen(
                 viewModel = vm,
                 onNavigateToScanner = { navController.navigate(Routes.PUMP_SCANNER) },
                 onNavigateToSettings = { navController.navigate(Routes.PUMP_SETTINGS) },
                 onSetupPump = { navController.navigate(Routes.SETUP_PUMP) },
+                onNavigateToProfile = { navController.navigate(Routes.PUMP_PROFILE) },
             )
         }
 
         composable(Routes.PUMP_SCANNER) {
-            val vm: PumpViewModel = viewModel()
+            val vm: PumpViewModel = hiltViewModel()
             ScannerScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.PUMP_SETTINGS) {
-            val vm: PumpViewModel = viewModel()
+            val vm: PumpViewModel = hiltViewModel()
             PumpSettingsScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.SETUP_PUMP) {
-            val vm: PumpViewModel = viewModel()
+            val vm: PumpViewModel = hiltViewModel()
             SetupPumpScreen(
                 viewModel = vm,
                 onBack = { navController.popBackStack() },
@@ -142,6 +158,21 @@ fun ZapPayNavGraph(
                         popUpTo(Routes.PUMP_DASHBOARD) { inclusive = true }
                     }
                 },
+            )
+        }
+
+        // ── Pump Profile ──
+        composable(Routes.PUMP_PROFILE) {
+            ProfileScreen(
+                userName = null,
+                userPhone = null,
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate(Routes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
             )
         }
     }

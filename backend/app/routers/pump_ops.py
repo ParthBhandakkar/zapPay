@@ -27,6 +27,51 @@ logger = logging.getLogger("zappay.routers.pump_ops")
 router = APIRouter(prefix="/api/v1", tags=["pump-ops"])
 security = HTTPBearer(auto_error=False)
 
+DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "CNG"]
+DEFAULT_FUEL_RATES = ["104.50", "92.30", "78.00"]
+
+
+def _split_csv(value, fallback=None):
+    if value is None:
+        return fallback or []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _normalize_pump_settings(pump_id: int, data: Optional[dict] = None) -> dict:
+    data = data or {}
+    fuel_types = _split_csv(data.get("fuel_types"), DEFAULT_FUEL_TYPES)
+    fuel_rates = _split_csv(data.get("fuel_rates"), DEFAULT_FUEL_RATES)
+
+    if "petrol_price" in data and not data.get("fuel_rates"):
+        fuel_types = ["Petrol", "Diesel"]
+        fuel_rates = [str(data.get("petrol_price") or "0"), str(data.get("diesel_price") or "0")]
+
+    while len(fuel_rates) < len(fuel_types):
+        fuel_rates.append("0")
+
+    is_open_raw = data.get("is_open", True)
+    if isinstance(is_open_raw, str):
+        is_open = is_open_raw.lower() not in {"false", "0", "no", "closed"}
+    else:
+        is_open = bool(is_open_raw)
+
+    settings_data = {
+        "pump_id": pump_id,
+        "pump_name": str(data.get("pump_name") or ""),
+        "fuel_types": ",".join(fuel_types),
+        "fuel_rates": ",".join(fuel_rates[:len(fuel_types)]),
+        "is_open": is_open,
+        "petrol_price": fuel_rates[0] if fuel_rates else "0",
+        "diesel_price": fuel_rates[1] if len(fuel_rates) > 1 else "0",
+    }
+
+    if len(fuel_rates) > 2:
+        settings_data["cng_price"] = fuel_rates[2]
+
+    return settings_data
+
 
 def require_pump_operator(db: Session, credentials: Optional[HTTPAuthorizationCredentials]) -> User:
     if not credentials:
@@ -260,24 +305,21 @@ async def save_pump_settings(
     pump_id = payload.get("pump_id")
     if not pump_id:
         raise HTTPException(status_code=400, detail="pump_id required")
+    pump_id = int(pump_id)
 
-    pump_name = str(payload.get("pump_name") or "")
-    petrol_price = str(payload.get("petrol_price") or "0")
-    diesel_price = str(payload.get("diesel_price") or "0")
+    data = _normalize_pump_settings(pump_id, payload)
 
     try:
         r = get_redis()
         key = f"pump_settings:{pump_id}"
-        r.hset(key, "pump_name", pump_name)
-        r.hset(key, "petrol_price", petrol_price)
-        r.hset(key, "diesel_price", diesel_price)
+        r.hset(key, mapping={field: str(value) for field, value in data.items()})
     except Exception as e:
         logger.warning("Redis unavailable for pump settings: %s", e)
 
     return {
         "success": True,
         "message": "Settings saved",
-        "data": {"pump_id": pump_id, "pump_name": pump_name, "petrol_price": petrol_price, "diesel_price": diesel_price},
+        "data": data,
     }
 
 
@@ -292,20 +334,16 @@ async def get_pump_settings(
         r = get_redis()
         key = f"pump_settings:{pump_id}"
         data = r.hgetall(key) or {}
+        normalized = _normalize_pump_settings(pump_id, data)
         return {
             "success": True,
             "message": "Settings loaded",
-            "data": {
-                "pump_id": pump_id,
-                "pump_name": data.get("pump_name", ""),
-                "petrol_price": data.get("petrol_price", "0"),
-                "diesel_price": data.get("diesel_price", "0"),
-            },
+            "data": normalized,
         }
     except Exception as e:
         logger.warning("Redis unavailable for pump settings: %s", e)
         return {
             "success": True,
             "message": "Settings loaded (from defaults)",
-            "data": {"pump_id": pump_id, "pump_name": "", "petrol_price": "0", "diesel_price": "0"},
+            "data": _normalize_pump_settings(pump_id),
         }

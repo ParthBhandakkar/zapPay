@@ -19,7 +19,33 @@ import com.zappay.app.ui.theme.*
 fun WelcomeScreen(
     onCustomerClick: () -> Unit,
     onPumpClick: () -> Unit,
+    onDirectToCustomer: (() -> Unit)? = null,
+    onDirectToPump: (() -> Unit)? = null,
+    authViewModel: AuthViewModel? = null,
 ) {
+    val authState by authViewModel?.uiState?.collectAsState() ?: remember { mutableStateOf(null) }
+    var sessionChecked by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        if (authState != null) {
+            if (authState!!.isLoggedIn) {
+                when (authState!!.userRole) {
+                    "pump_operator", "pump_owner" -> onDirectToPump?.invoke() ?: onPumpClick()
+                    else -> onDirectToCustomer?.invoke() ?: onCustomerClick()
+                }
+            } else {
+                sessionChecked = true
+            }
+        }
+    }
+
+    if (!sessionChecked && authState == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Purple500)
+        }
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,7 +108,7 @@ fun WelcomeScreen(
                 ) { Text("P", fontSize = 22.sp, color = Blue500, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Pump Operator", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Gray900)
+                    Text("Pump Owner", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Gray900)
                     Text("I want to scan codes & accept payments", fontSize = 13.sp, color = Gray500)
                 }
             }

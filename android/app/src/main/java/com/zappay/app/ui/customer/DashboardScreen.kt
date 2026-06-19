@@ -19,6 +19,7 @@ fun CustomerDashboardScreen(
     viewModel: CustomerViewModel,
     onNavigateToWallet: () -> Unit,
     onNavigateToQR: () -> Unit,
+    onNavigateToProfile: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -29,6 +30,11 @@ fun CustomerDashboardScreen(
             TopAppBar(
                 title = { Text("Dashboard", fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
+                actions = {
+                    TextButton(onClick = onNavigateToProfile) {
+                        Text("Profile", color = Purple500)
+                    }
+                },
             )
         },
     ) { padding ->

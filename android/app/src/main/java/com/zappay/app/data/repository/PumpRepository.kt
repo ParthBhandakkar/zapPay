@@ -24,7 +24,17 @@ class PumpRepository @Inject constructor(
         return try {
             val response = api.registerPump(request)
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error(response.errorBody()?.string() ?: "Registration failed")
+            else {
+                val errorBody = response.errorBody()?.string()
+                val message = try {
+                    val json = org.json.JSONObject(errorBody ?: "")
+                    val error = json.optJSONObject("error")
+                    error?.optString("message") ?: json.optString("message", "Registration failed")
+                } catch (_: Exception) {
+                    errorBody ?: "Registration failed"
+                }
+                Resource.Error(message)
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }
@@ -80,7 +90,7 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun getSettings(pumpId: Int): Resource<GenericResponse> {
+    suspend fun getSettings(pumpId: Int): Resource<PumpSettingsResponse> {
         return try {
             val response = api.getPumpSettings(pumpId)
             if (response.isSuccessful) Resource.Success(response.body()!!)
@@ -90,11 +100,21 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun saveSettings(body: Map<String, Any>): Resource<GenericResponse> {
+    suspend fun saveSettings(pumpId: Int, fuelTypes: String, fuelRates: String, isOpen: Boolean): Resource<PumpSettingsResponse> {
         return try {
-            val response = api.savePumpSettings(body)
+            val response = api.savePumpSettings(SaveSettingsRequest(pumpId, fuelTypes, fuelRates, isOpen))
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error("Failed to save settings")
+            else {
+                val errorBody = response.errorBody()?.string()
+                val message = try {
+                    val json = org.json.JSONObject(errorBody ?: "")
+                    val error = json.optJSONObject("error")
+                    error?.optString("message") ?: json.optString("message", "Failed to save settings")
+                } catch (_: Exception) {
+                    errorBody ?: "Failed to save settings"
+                }
+                Resource.Error(message)
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }

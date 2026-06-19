@@ -29,7 +29,10 @@ fun QRCodeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.generateQR() }
+    LaunchedEffect(Unit) {
+        viewModel.loadVehicleInfo()
+        viewModel.generateQR()
+    }
 
     Scaffold(
         topBar = {
@@ -55,8 +58,30 @@ fun QRCodeScreen(
 
             if (state.isLoading) {
                 CircularProgressIndicator(color = Purple500)
+            } else if (state.vehicleNumber.isEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Yellow100),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Complete your profile", fontWeight = FontWeight.SemiBold, color = Gray900)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Add your vehicle details in Profile to generate QR", color = Gray700, fontSize = 13.sp, textAlign = TextAlign.Center)
+                    }
+                }
             } else if (state.qrData != null) {
-                // QR Code
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Purple50),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Vehicle:", fontWeight = FontWeight.SemiBold, color = Purple500, fontSize = 13.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("${state.vehicleNumber} (${state.vehicleType})", color = Gray900, fontSize = 13.sp)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+
                 Card(
                     modifier = Modifier.size(280.dp),
                     shape = RoundedCornerShape(20.dp),

@@ -74,3 +74,30 @@ data class GenericResponse(
     val message: String,
     val data: Map<String, Any>? = null,
 )
+
+@JsonClass(generateAdapter = true)
+data class PumpSettingsData(
+    @Json(name = "pump_id") val pumpId: Int,
+    @Json(name = "pump_name") val pumpName: String? = null,
+    @Json(name = "fuel_types") val fuelTypes: String = "Petrol,Diesel,CNG",
+    @Json(name = "fuel_rates") val fuelRates: String = "104.50,92.30,78.00",
+    @Json(name = "is_open") val isOpen: Boolean = true,
+    @Json(name = "petrol_price") val petrolPrice: String? = null,
+    @Json(name = "diesel_price") val dieselPrice: String? = null,
+    @Json(name = "cng_price") val cngPrice: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class PumpSettingsResponse(
+    val success: Boolean,
+    val message: String,
+    val data: PumpSettingsData,
+)
+
+@JsonClass(generateAdapter = true)
+data class SaveSettingsRequest(
+    @Json(name = "pump_id") val pumpId: Int,
+    @Json(name = "fuel_types") val fuelTypes: String,
+    @Json(name = "fuel_rates") val fuelRates: String,
+    @Json(name = "is_open") val isOpen: Boolean,
+)

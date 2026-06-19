@@ -98,10 +98,10 @@ interface ZapPayApi {
     suspend fun fuelPurchaseByVehicle(@Body request: PurchaseByVehicleRequest): Response<GenericResponse>
 
     @GET("settings/{pump_id}")
-    suspend fun getPumpSettings(@Path("pump_id") pumpId: Int): Response<GenericResponse>
+    suspend fun getPumpSettings(@Path("pump_id") pumpId: Int): Response<PumpSettingsResponse>
 
     @POST("settings/save")
-    suspend fun savePumpSettings(@Body body: Map<String, Any>): Response<GenericResponse>
+    suspend fun savePumpSettings(@Body body: SaveSettingsRequest): Response<PumpSettingsResponse>
 
     // ── Health ─────────────────────────────────────────────────────────
     @GET("../health")

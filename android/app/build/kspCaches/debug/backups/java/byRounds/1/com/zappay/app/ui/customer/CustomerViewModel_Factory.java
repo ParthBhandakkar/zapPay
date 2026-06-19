@@ -1,5 +1,6 @@
 package com.zappay.app.ui.customer;
 
+import com.zappay.app.data.local.TokenManager;
 import com.zappay.app.data.repository.QRRepository;
 import com.zappay.app.data.repository.TransactionRepository;
 import com.zappay.app.data.repository.WalletRepository;
@@ -33,28 +34,32 @@ public final class CustomerViewModel_Factory implements Factory<CustomerViewMode
 
   private final Provider<QRRepository> qrRepositoryProvider;
 
+  private final Provider<TokenManager> tokenManagerProvider;
+
   public CustomerViewModel_Factory(Provider<WalletRepository> walletRepositoryProvider,
       Provider<TransactionRepository> transactionRepositoryProvider,
-      Provider<QRRepository> qrRepositoryProvider) {
+      Provider<QRRepository> qrRepositoryProvider, Provider<TokenManager> tokenManagerProvider) {
     this.walletRepositoryProvider = walletRepositoryProvider;
     this.transactionRepositoryProvider = transactionRepositoryProvider;
     this.qrRepositoryProvider = qrRepositoryProvider;
+    this.tokenManagerProvider = tokenManagerProvider;
   }
 
   @Override
   public CustomerViewModel get() {
-    return newInstance(walletRepositoryProvider.get(), transactionRepositoryProvider.get(), qrRepositoryProvider.get());
+    return newInstance(walletRepositoryProvider.get(), transactionRepositoryProvider.get(), qrRepositoryProvider.get(), tokenManagerProvider.get());
   }
 
   public static CustomerViewModel_Factory create(
       Provider<WalletRepository> walletRepositoryProvider,
       Provider<TransactionRepository> transactionRepositoryProvider,
-      Provider<QRRepository> qrRepositoryProvider) {
-    return new CustomerViewModel_Factory(walletRepositoryProvider, transactionRepositoryProvider, qrRepositoryProvider);
+      Provider<QRRepository> qrRepositoryProvider, Provider<TokenManager> tokenManagerProvider) {
+    return new CustomerViewModel_Factory(walletRepositoryProvider, transactionRepositoryProvider, qrRepositoryProvider, tokenManagerProvider);
   }
 
   public static CustomerViewModel newInstance(WalletRepository walletRepository,
-      TransactionRepository transactionRepository, QRRepository qrRepository) {
-    return new CustomerViewModel(walletRepository, transactionRepository, qrRepository);
+      TransactionRepository transactionRepository, QRRepository qrRepository,
+      TokenManager tokenManager) {
+    return new CustomerViewModel(walletRepository, transactionRepository, qrRepository, tokenManager);
   }
 }

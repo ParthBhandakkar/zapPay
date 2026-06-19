@@ -116,7 +116,7 @@ fun LoginScreen(
 
             ZapPayButton(
                 text = state.isLoading.let { if (it) "Verifying..." else "Login with OTP" },
-                onClick = { viewModel.loginWithOTP(phone, otp) },
+                onClick = { viewModel.loginWithOTP(phone, otp, role) },
                 isLoading = state.isLoading,
                 enabled = otp.length == 6 && phone.length >= 10,
             )
@@ -141,7 +141,7 @@ fun LoginScreen(
 
                 ZapPayButton(
                     text = "Login",
-                    onClick = { viewModel.login(phone, password) },
+                    onClick = { viewModel.login(phone, password, role) },
                     isLoading = state.isLoading,
                     enabled = phone.length >= 10 && password.isNotEmpty(),
                 )

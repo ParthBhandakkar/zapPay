@@ -21,14 +21,15 @@ fun PumpDashboardScreen(
     onNavigateToScanner: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onSetupPump: () -> Unit,
+    onNavigateToProfile: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
-
-    if (!state.hasPump) {
-        NoPumpScreen(onSetupPump = onSetupPump)
-        return
+    LaunchedEffect(state.pumpId) {
+        if (state.pumpId != null) {
+            viewModel.loadSettings()
+        }
     }
 
     Scaffold(
@@ -36,10 +37,17 @@ fun PumpDashboardScreen(
             TopAppBar(
                 title = { Text("Pump Dashboard", fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
+                actions = {
+                    TextButton(onClick = onNavigateToProfile) {
+                        Text("Profile", color = Purple500)
+                    }
+                },
             )
         },
     ) { padding ->
-        if (state.isLoading && state.totalTransactions == 0) {
+        if (!state.hasPump) {
+            NoPumpScreen(onSetupPump = onSetupPump, modifier = Modifier.padding(padding))
+        } else if (state.isLoading && state.totalTransactions == 0) {
             LoadingScreen()
         } else {
             Column(
@@ -58,6 +66,25 @@ fun PumpDashboardScreen(
                 }
 
                 Spacer(Modifier.height(20.dp))
+
+                state.settings?.let { settings ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = if (settings.isOpen) Green100 else Yellow100),
+                    ) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text(
+                                if (settings.isOpen) "Pump open" else "Pump closed",
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (settings.isOpen) Green500 else Yellow500,
+                                fontSize = 14.sp,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(formatFuelRateSummary(settings.fuelTypes, settings.fuelRates), color = Gray700, fontSize = 13.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(20.dp))
+                }
 
                 // Action buttons
                 Text("Actions", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Gray900)
@@ -102,10 +129,18 @@ fun PumpDashboardScreen(
     }
 }
 
+private fun formatFuelRateSummary(fuelTypes: String, fuelRates: String): String {
+    val types = fuelTypes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    val rates = fuelRates.split(",").map { it.trim() }
+    return types.mapIndexed { index, type ->
+        "$type ₹${rates.getOrNull(index) ?: "0"}/L"
+    }.joinToString("  ")
+}
+
 @Composable
-private fun NoPumpScreen(onSetupPump: () -> Unit) {
+private fun NoPumpScreen(onSetupPump: () -> Unit, modifier: Modifier = Modifier) {
     Column(
-        Modifier.fillMaxSize().padding(32.dp),
+        modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -114,6 +149,5 @@ private fun NoPumpScreen(onSetupPump: () -> Unit) {
         Text("Register your pump to start accepting payments", color = Gray500)
         Spacer(Modifier.height(24.dp))
         ZapPayButton(text = "Register Pump", onClick = onSetupPump)
-        if (onSetupPump == null) Spacer(Modifier.height(16.dp))
     }
 }
