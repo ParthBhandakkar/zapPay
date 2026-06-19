@@ -34,6 +34,12 @@ data class PumpUiState(
     // Purchase
     val purchaseSuccess: Boolean = false,
     val purchaseMessage: String? = null,
+    val purchaseCustomerName: String? = null,
+    val purchaseCustomerPhone: String? = null,
+    val purchaseVehicleNumber: String? = null,
+    val purchaseFuelType: String? = null,
+    val purchaseFuelQuantity: Double? = null,
+    val purchaseFuelRate: Double? = null,
 
     // Settings
     val settings: PumpSettingsData? = null,
@@ -125,6 +131,8 @@ class PumpViewModel @Inject constructor(
         fuelRate: Double,
     ) {
         val pumpId = _uiState.value.pumpId ?: return
+        val customer = _uiState.value.scannedCustomer
+        val vehicle = _uiState.value.lookedUpVehicle
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val result = if (qrCode != null) {
@@ -144,6 +152,12 @@ class PumpViewModel @Inject constructor(
                         isLoading = false,
                         purchaseSuccess = true,
                         purchaseMessage = result.data.message,
+                        purchaseCustomerName = customer?.userName ?: vehicle?.userName,
+                        purchaseCustomerPhone = customer?.userPhone ?: vehicle?.userPhone,
+                        purchaseVehicleNumber = customer?.vehicleNumber ?: vehicle?.vehicleNumber,
+                        purchaseFuelType = fuelType,
+                        purchaseFuelQuantity = fuelQuantity,
+                        purchaseFuelRate = fuelRate,
                     )
                     loadDashboard()
                 }
@@ -223,7 +237,16 @@ class PumpViewModel @Inject constructor(
     }
 
     fun clearPurchaseSuccess() {
-        _uiState.value = _uiState.value.copy(purchaseSuccess = false, purchaseMessage = null)
+        _uiState.value = _uiState.value.copy(
+            purchaseSuccess = false,
+            purchaseMessage = null,
+            purchaseCustomerName = null,
+            purchaseCustomerPhone = null,
+            purchaseVehicleNumber = null,
+            purchaseFuelType = null,
+            purchaseFuelQuantity = null,
+            purchaseFuelRate = null,
+        )
     }
 
     fun clearRegistrationSuccess() {

@@ -65,6 +65,9 @@ interface ZapPayApi {
     @GET("transactions/{id}")
     suspend fun getTransactionDetails(@Path("id") id: String): Response<TransactionDto>
 
+    @GET("transactions/{id}/receipt")
+    suspend fun getTransactionReceipt(@Path("id") id: String): Response<ReceiptDto>
+
     // ── Pumps ──────────────────────────────────────────────────────────
     @GET("pumps")
     suspend fun getPumps(

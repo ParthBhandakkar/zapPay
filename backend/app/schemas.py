@@ -259,6 +259,7 @@ class FuelPurchaseRequest(BaseModel):
     fuel_type: str
     fuel_quantity: float
     fuel_rate: float
+    idempotency_key: Optional[str] = None
 
     @field_validator("fuel_quantity")
     @classmethod
@@ -285,10 +286,37 @@ class TransactionResponse(TransactionBase):
     transaction_type: TransactionType
     status: TransactionStatus
     commission_amount: float
+    fuel_quantity: Optional[float] = None
+    fuel_type: Optional[str] = None
+    fuel_rate: Optional[float] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    pump_name: Optional[str] = None
+    user_name: Optional[str] = None
+    user_phone: Optional[str] = None
+    vehicle_number: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+
+class ReceiptResponse(BaseModel):
+    receipt_number: str
+    transaction_id: str
+    pump_name: Optional[str] = None
+    pump_address: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    vehicle_number: Optional[str] = None
+    fuel_type: Optional[str] = None
+    fuel_quantity: Optional[float] = None
+    fuel_rate: Optional[float] = None
+    amount: float
+    commission_amount: float = 0.0
+    wallet_balance_before: Optional[float] = None
+    wallet_balance_after: Optional[float] = None
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime] = None
 
 
 class TransactionHistory(BaseModel):

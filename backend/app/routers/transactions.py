@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.database import get_db
-from app.models import User, Transaction, TransactionType, TransactionStatus
+from app.models import User, Transaction, TransactionType, TransactionStatus, PetrolPump, RefundRequest, RefundStatus
 from app.schemas import (
-    FuelPurchaseRequest, TransactionResponse, TransactionHistory, BaseResponse
+    FuelPurchaseRequest, TransactionResponse, TransactionHistory, ReceiptResponse, BaseResponse
 )
 from app.services.auth import get_current_user
 from app.services.payment import (
@@ -22,10 +22,7 @@ async def purchase_fuel(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Process fuel purchase using QR code scan."""
-    
-    # This endpoint is typically called by pump operators, but we'll verify the request
-    # In production, you might want additional validation for pump operators
+    """Process fuel purchase using QR code scan. Supports idempotency via idempotency_key."""
     
     result = process_fuel_purchase(
         db=db,
@@ -33,7 +30,8 @@ async def purchase_fuel(
         pump_id=purchase_data.pump_id,
         fuel_type=purchase_data.fuel_type,
         fuel_quantity=purchase_data.fuel_quantity,
-        fuel_rate=purchase_data.fuel_rate
+        fuel_rate=purchase_data.fuel_rate,
+        idempotency_key=purchase_data.idempotency_key,
     )
     
     if not result["success"]:
@@ -89,7 +87,7 @@ async def get_transaction_details(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Get details of a specific transaction."""
+    """Get details of a specific transaction with pump and user info."""
     
     user = get_current_user(db, credentials.credentials)
     
@@ -104,7 +102,71 @@ async def get_transaction_details(
             detail="Transaction not found"
         )
     
-    return transaction
+    tx = transaction.__dict__.copy()
+    tx.pop("_sa_instance_state", None)
+    
+    if transaction.pump:
+        tx["pump_name"] = transaction.pump.pump_name
+    if transaction.user:
+        tx["user_name"] = transaction.user.full_name
+        tx["user_phone"] = transaction.user.phone_number
+        tx["vehicle_number"] = transaction.user.vehicle_number
+    
+    return tx
+
+
+@router.get("/{transaction_id}/receipt", response_model=ReceiptResponse)
+async def get_transaction_receipt(
+    transaction_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Get a detailed receipt for a transaction."""
+    
+    user = get_current_user(db, credentials.credentials)
+    
+    transaction = db.query(Transaction).filter(
+        Transaction.transaction_id == transaction_id,
+        Transaction.user_id == user.id
+    ).first()
+    
+    if not transaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found"
+        )
+    
+    wallet_before = None
+    wallet_after = None
+    if transaction.wallet:
+        wallet_after = transaction.wallet.balance
+        wallet_before = wallet_after + transaction.amount
+    
+    pump_name = None
+    pump_address = None
+    if transaction.pump:
+        pump_name = transaction.pump.pump_name
+        pump_address = f"{transaction.pump.address}, {transaction.pump.city}"
+    
+    return ReceiptResponse(
+        receipt_number=f"RCP-{transaction.transaction_id}",
+        transaction_id=transaction.transaction_id,
+        pump_name=pump_name,
+        pump_address=pump_address,
+        customer_name=transaction.user.full_name if transaction.user else None,
+        customer_phone=transaction.user.phone_number if transaction.user else None,
+        vehicle_number=transaction.user.vehicle_number if transaction.user else None,
+        fuel_type=transaction.fuel_type,
+        fuel_quantity=transaction.fuel_quantity,
+        fuel_rate=transaction.fuel_rate,
+        amount=transaction.amount,
+        commission_amount=transaction.commission_amount or 0.0,
+        wallet_balance_before=wallet_before,
+        wallet_balance_after=wallet_after,
+        status=transaction.status.value if hasattr(transaction.status, 'value') else str(transaction.status),
+        created_at=transaction.created_at,
+        completed_at=transaction.completed_at,
+    )
 
 @router.post("/{transaction_id}/refund", response_model=BaseResponse)
 async def request_refund(
@@ -113,11 +175,10 @@ async def request_refund(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Request refund for a transaction (Admin/Pump owner functionality)."""
+    """Request refund for a transaction. Creates a refund request for admin review."""
     
     user = get_current_user(db, credentials.credentials)
     
-    # Verify transaction belongs to user or user has admin rights
     transaction = db.query(Transaction).filter(
         Transaction.transaction_id == transaction_id
     ).first()
@@ -128,25 +189,49 @@ async def request_refund(
             detail="Transaction not found"
         )
     
-    # Only allow refunds for the transaction owner or admins
     if transaction.user_id != user.id and user.role.value != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to refund this transaction"
         )
     
-    result = refund_transaction(db, transaction_id, reason)
-    
-    if not result["success"]:
+    # Check if refund request already exists for this transaction
+    existing = db.query(RefundRequest).filter(
+        RefundRequest.transaction_id == transaction_id,
+        RefundRequest.status.in_([RefundStatus.REQUESTED, RefundStatus.APPROVED])
+    ).first()
+    if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result["message"]
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Refund request already exists with status: {existing.status.value}"
         )
+    
+    # Admins can process refund immediately
+    if user.role.value == "admin":
+        result = refund_transaction(db, transaction_id, reason)
+        if not result["success"]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+        return BaseResponse(
+            success=True,
+            message=result["message"],
+            data={"refunded_amount": result["refunded_amount"]}
+        )
+    
+    # Regular users create a refund request
+    refund_req = RefundRequest(
+        transaction_id=transaction_id,
+        user_id=transaction.user_id,
+        requested_by=user.id,
+        reason=reason,
+        status=RefundStatus.REQUESTED,
+    )
+    db.add(refund_req)
+    db.commit()
     
     return BaseResponse(
         success=True,
-        message=result["message"],
-        data={"refunded_amount": result["refunded_amount"]}
+        message="Refund request submitted for review",
+        data={"request_id": refund_req.id}
     )
 
 @router.get("/pump/{pump_id}/history")

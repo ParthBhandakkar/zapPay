@@ -5,6 +5,7 @@ import com.zappay.app.di.NetworkModule;
 import com.zappay.app.ui.auth.AuthViewModel_HiltModules;
 import com.zappay.app.ui.customer.CustomerViewModel_HiltModules;
 import com.zappay.app.ui.pump.PumpViewModel_HiltModules;
+import com.zappay.app.ui.pump.TransactionDetailViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -162,6 +163,7 @@ public final class ZapPayApplication_HiltComponents {
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
           PumpViewModel_HiltModules.KeyModule.class,
+          TransactionDetailViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class
       }
@@ -202,7 +204,8 @@ public final class ZapPayApplication_HiltComponents {
           AuthViewModel_HiltModules.BindsModule.class,
           CustomerViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
-          PumpViewModel_HiltModules.BindsModule.class
+          PumpViewModel_HiltModules.BindsModule.class,
+          TransactionDetailViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

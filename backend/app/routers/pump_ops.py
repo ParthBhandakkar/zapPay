@@ -270,6 +270,7 @@ async def purchase_fuel_by_vehicle(
     fuel_type = body.get("fuel_type")
     fuel_quantity = body.get("fuel_quantity")
     fuel_rate = body.get("fuel_rate")
+    idempotency_key = body.get("idempotency_key")
 
     if not all([user_id, pump_id, fuel_type, fuel_quantity, fuel_rate]):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -281,6 +282,7 @@ async def purchase_fuel_by_vehicle(
         fuel_type=fuel_type,
         fuel_quantity=float(fuel_quantity),
         fuel_rate=float(fuel_rate),
+        idempotency_key=idempotency_key,
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
@@ -309,9 +311,19 @@ async def save_pump_settings(
 
     data = _normalize_pump_settings(pump_id, payload)
 
+    # Persist to DB
+    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
+    if pump:
+        pump.fuel_types = data.get("fuel_types", pump.fuel_types)
+        pump.fuel_rates = data.get("fuel_rates", pump.fuel_rates)
+        pump.is_open = data.get("is_open", pump.is_open)
+        db.commit()
+
+    # Cache in Redis
     try:
         r = get_redis()
         key = f"pump_settings:{pump_id}"
+        r.delete(key)
         r.hset(key, mapping={field: str(value) for field, value in data.items()})
     except Exception as e:
         logger.warning("Redis unavailable for pump settings: %s", e)
@@ -330,20 +342,45 @@ async def get_pump_settings(
     db: Session = Depends(get_db),
 ):
     require_pump_operator(db, credentials)
+
+    # Try Redis cache first
     try:
         r = get_redis()
         key = f"pump_settings:{pump_id}"
-        data = r.hgetall(key) or {}
-        normalized = _normalize_pump_settings(pump_id, data)
+        cached = r.hgetall(key)
+        if cached:
+            return {
+                "success": True,
+                "message": "Settings loaded",
+                "data": _normalize_pump_settings(pump_id, cached),
+            }
+    except Exception as e:
+        logger.warning("Redis unavailable: %s", e)
+
+    # Fallback to DB
+    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
+    if pump:
+        db_data = {
+            "fuel_types": pump.fuel_types or "",
+            "fuel_rates": pump.fuel_rates or "",
+            "is_open": pump.is_open if pump.is_open is not None else True,
+        }
+        # Re-populate Redis
+        normalized = _normalize_pump_settings(pump_id, db_data)
+        try:
+            r = get_redis()
+            key = f"pump_settings:{pump_id}"
+            r.hset(key, mapping={field: str(value) for field, value in normalized.items()})
+        except Exception:
+            pass
         return {
             "success": True,
             "message": "Settings loaded",
             "data": normalized,
         }
-    except Exception as e:
-        logger.warning("Redis unavailable for pump settings: %s", e)
-        return {
-            "success": True,
-            "message": "Settings loaded (from defaults)",
-            "data": _normalize_pump_settings(pump_id),
-        }
+
+    return {
+        "success": True,
+        "message": "Settings loaded (from defaults)",
+        "data": _normalize_pump_settings(pump_id),
+    }

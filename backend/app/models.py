@@ -147,6 +147,8 @@ class PetrolPump(Base):
     email = Column(String(255))
     daily_fuel_capacity = Column(Float)
     fuel_types = Column(String(255))
+    fuel_rates = Column(String(255))
+    is_open = Column(Boolean, default=True)
     commission_rate = Column(Float, default=0.02)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
@@ -208,6 +210,14 @@ class Transaction(Base):
         return f"<Transaction id={self.id} tid={self.transaction_id} amount={self.amount} status={self.status}>"
 
 
+class SettlementStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    PAID = "paid"
+    FAILED = "failed"
+    HELD = "held"
+
+
 class Settlement(Base):
     __tablename__ = "settlements"
 
@@ -221,13 +231,64 @@ class Settlement(Base):
     settlement_date = Column(DateTime(timezone=True), server_default=func.now())
     from_date = Column(DateTime(timezone=True), nullable=False)
     to_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(Enum(SettlementStatus), default=SettlementStatus.PENDING)
     is_processed = Column(Boolean, default=False)
     processed_at = Column(DateTime(timezone=True))
+    bank_payout_ref = Column(String(255))
+    notes = Column(Text)
 
     pump = relationship("PetrolPump", back_populates="settlements")
 
     def __repr__(self):
-        return f"<Settlement id={self.id} sid={self.settlement_id} pump_id={self.pump_id}>"
+        return f"<Settlement id={self.id} sid={self.settlement_id} pump_id={self.pump_id} status={self.status}>"
+
+
+class RefundStatus(str, enum.Enum):
+    REQUESTED = "requested"
+    APPROVED = "approved"
+    PROCESSED = "processed"
+    REJECTED = "rejected"
+
+
+class RefundRequest(Base):
+    __tablename__ = "refund_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(String(100), ForeignKey("transactions.transaction_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    requested_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(Enum(RefundStatus), default=RefundStatus.REQUESTED)
+    reviewed_by = Column(Integer, ForeignKey("users.id"))
+    review_notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True))
+
+    transaction = relationship("Transaction", foreign_keys=[transaction_id])
+    user = relationship("User", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+    def __repr__(self):
+        return f"<RefundRequest id={self.id} txn={self.transaction_id} status={self.status}>"
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    actor_role = Column(String(50))
+    action = Column(String(100), nullable=False)
+    resource_type = Column(String(100), nullable=False)
+    resource_id = Column(String(100))
+    details = Column(Text)
+    ip_address = Column(String(45))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    actor = relationship("User", foreign_keys=[actor_id])
+
+    def __repr__(self):
+        return f"<AuditEvent id={self.id} action={self.action} resource={self.resource_type}>"
 
 
 class OTP(Base):
@@ -241,6 +302,64 @@ class OTP(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at = Column(DateTime(timezone=True))
+
+
+class IdempotencyKey(Base):
+    __tablename__ = "idempotency_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    idempotency_key = Column(String(255), unique=True, index=True, nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    status = Column(String(50), nullable=False)
+    response_body = Column(Text)
+    transaction_id = Column(String(100))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class Country(Base):
+    __tablename__ = "countries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(2), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    phone_code = Column(String(5))
+    currency_code = Column(String(3), nullable=False)
+    default_language = Column(String(10), default="en")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Currency(Base):
+    __tablename__ = "currencies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(3), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    symbol = Column(String(10), nullable=False)
+    decimal_places = Column(Integer, default=2)
+    is_active = Column(Boolean, default=True)
+
+
+class FuelProduct(Base):
+    __tablename__ = "fuel_products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    country_code = Column(String(2), ForeignKey("countries.code"))
+    unit = Column(String(20), default="litre")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class FeatureFlag(Base):
+    __tablename__ = "feature_flags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    enabled = Column(Boolean, default=False)
+    description = Column(Text)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
 # ── Composite Indexes ──────────────────────────────────────────────────

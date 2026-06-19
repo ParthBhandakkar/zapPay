@@ -18,6 +18,7 @@ import com.zappay.app.util.formatDate
 fun HistoryScreen(
     viewModel: CustomerViewModel,
     onBack: () -> Unit,
+    onTransactionClick: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
     var filter by remember { mutableStateOf("all") }
@@ -68,6 +69,7 @@ fun HistoryScreen(
                             subtitle = tx.createdAt.formatDate(),
                             amount = tx.amount,
                             isCredit = tx.transactionType == "wallet_recharge",
+                            onClick = { onTransactionClick(tx.transactionId) },
                         )
                         HorizontalDivider(color = Gray100)
                     }

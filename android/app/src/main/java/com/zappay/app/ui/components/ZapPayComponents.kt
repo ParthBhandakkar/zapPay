@@ -192,9 +192,13 @@ fun TransactionItem(
     amount: Double,
     isCredit: Boolean,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 4.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

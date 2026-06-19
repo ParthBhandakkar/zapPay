@@ -23,8 +23,8 @@ public class TransactionDtoJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<TransactionDto>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "transaction_id", "user_id",
-      "amount", "commission_amount", "fuel_quantity", "fuel_type", "transaction_type", "status",
-      "created_at", "completed_at")
+      "amount", "commission_amount", "fuel_quantity", "fuel_type", "pump_name", "user_name",
+      "user_phone", "vehicle_number", "transaction_type", "status", "created_at", "completed_at")
 
   private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(), "id")
 
@@ -51,6 +51,10 @@ public class TransactionDtoJsonAdapter(
     var commissionAmount: Double? = null
     var fuelQuantity: Double? = null
     var fuelType: String? = null
+    var pumpName: String? = null
+    var userName: String? = null
+    var userPhone: String? = null
+    var vehicleNumber: String? = null
     var transactionType: String? = null
     var status: String? = null
     var createdAt: String? = null
@@ -69,13 +73,17 @@ public class TransactionDtoJsonAdapter(
             throw Util.unexpectedNull("commissionAmount", "commission_amount", reader)
         5 -> fuelQuantity = nullableDoubleAdapter.fromJson(reader)
         6 -> fuelType = nullableStringAdapter.fromJson(reader)
-        7 -> transactionType = stringAdapter.fromJson(reader) ?:
+        7 -> pumpName = nullableStringAdapter.fromJson(reader)
+        8 -> userName = nullableStringAdapter.fromJson(reader)
+        9 -> userPhone = nullableStringAdapter.fromJson(reader)
+        10 -> vehicleNumber = nullableStringAdapter.fromJson(reader)
+        11 -> transactionType = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("transactionType", "transaction_type", reader)
-        8 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
+        12 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
-        9 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
+        13 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
             "created_at", reader)
-        10 -> completedAt = nullableStringAdapter.fromJson(reader)
+        14 -> completedAt = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -94,6 +102,10 @@ public class TransactionDtoJsonAdapter(
             "commission_amount", reader),
         fuelQuantity = fuelQuantity,
         fuelType = fuelType,
+        pumpName = pumpName,
+        userName = userName,
+        userPhone = userPhone,
+        vehicleNumber = vehicleNumber,
         transactionType = transactionType ?: throw Util.missingProperty("transactionType",
             "transaction_type", reader),
         status = status ?: throw Util.missingProperty("status", "status", reader),
@@ -121,6 +133,14 @@ public class TransactionDtoJsonAdapter(
     nullableDoubleAdapter.toJson(writer, value_.fuelQuantity)
     writer.name("fuel_type")
     nullableStringAdapter.toJson(writer, value_.fuelType)
+    writer.name("pump_name")
+    nullableStringAdapter.toJson(writer, value_.pumpName)
+    writer.name("user_name")
+    nullableStringAdapter.toJson(writer, value_.userName)
+    writer.name("user_phone")
+    nullableStringAdapter.toJson(writer, value_.userPhone)
+    writer.name("vehicle_number")
+    nullableStringAdapter.toJson(writer, value_.vehicleNumber)
     writer.name("transaction_type")
     stringAdapter.toJson(writer, value_.transactionType)
     writer.name("status")

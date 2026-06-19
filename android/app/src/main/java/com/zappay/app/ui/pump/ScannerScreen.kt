@@ -2,6 +2,7 @@ package com.zappay.app.ui.pump
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.zappay.app.data.remote.dto.PumpSettingsData
+import com.zappay.app.util.NotificationHelper
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
 import java.util.concurrent.Executors
@@ -66,6 +68,10 @@ fun ScannerScreen(
         hasCameraPermission = granted
     }
 
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
     LaunchedEffect(Unit) {
         viewModel.loadDashboard()
     }
@@ -97,18 +103,91 @@ fun ScannerScreen(
         }
     }
 
+    var showSuccessDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.purchaseSuccess) {
         if (state.purchaseSuccess) {
             showPurchase = false
-            scannedQrData = null
-            cameraActive = true
-            scanMode = "qr"
-            manualInput = ""
-            fuelQuantity = ""
-            viewModel.clearPurchaseSuccess()
-            viewModel.clearScannedCustomer()
-            viewModel.clearLookedUpVehicle()
+            showSuccessDialog = true
         }
+    }
+
+    LaunchedEffect(showSuccessDialog) {
+        if (showSuccessDialog) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            NotificationHelper.showPurchaseNotification(
+                context = context,
+                notificationId = state.purchaseCustomerPhone?.hashCode() ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
+                customerName = state.purchaseCustomerName,
+                fuelType = state.purchaseFuelType,
+                quantity = state.purchaseFuelQuantity,
+                total = "${"%.2f".format((state.purchaseFuelQuantity ?: 0.0) * (state.purchaseFuelRate ?: 0.0))}",
+            )
+        }
+    }
+
+    if (showSuccessDialog) {
+        val p = state
+        val total = "${"%.2f".format((p.purchaseFuelQuantity ?: 0.0) * (p.purchaseFuelRate ?: 0.0))}"
+        val timestamp = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+
+        AlertDialog(
+            onDismissRequest = {
+                showSuccessDialog = false
+                scannedQrData = null
+                cameraActive = true
+                scanMode = "qr"
+                manualInput = ""
+                fuelQuantity = ""
+                viewModel.clearPurchaseSuccess()
+                viewModel.clearScannedCustomer()
+                viewModel.clearLookedUpVehicle()
+            },
+            icon = { Text("✅", fontSize = 28.sp) },
+            title = { Text("Payment Successful", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Card(colors = CardDefaults.cardColors(containerColor = Green50), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(p.purchaseMessage ?: "Transaction completed", fontSize = 13.sp, color = Gray700)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text("Transaction Details", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Spacer(Modifier.height(8.dp))
+
+                    DetailRow("Customer", p.purchaseCustomerName ?: "N/A")
+                    p.purchaseCustomerPhone?.let { DetailRow("Phone", it) }
+                    p.purchaseVehicleNumber?.let { DetailRow("Vehicle", it) }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+                    p.purchaseFuelType?.let { DetailRow("Fuel Type", it) }
+                    DetailRow("Quantity", "${"%.2f".format(p.purchaseFuelQuantity ?: 0.0)} L")
+                    DetailRow("Rate", "₹ ${"%.2f".format(p.purchaseFuelRate ?: 0.0)}/L")
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+                    DetailRow("Total Amount", "₹ $total", isBold = true)
+                    Spacer(Modifier.height(4.dp))
+                    DetailRow("Time", timestamp)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showSuccessDialog = false
+                    scannedQrData = null
+                    cameraActive = true
+                    scanMode = "qr"
+                    manualInput = ""
+                    fuelQuantity = ""
+                    viewModel.clearPurchaseSuccess()
+                    viewModel.clearScannedCustomer()
+                    viewModel.clearLookedUpVehicle()
+                }) { Text("OK") }
+            },
+        )
     }
 
     Scaffold(
@@ -438,4 +517,12 @@ private fun parseFuelOptions(settings: PumpSettingsData?): List<FuelOption> {
 
 private fun formatRate(rate: Double): String {
     return "%.2f".format(rate)
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, isBold: Boolean = false) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = Gray500, fontSize = 13.sp)
+        Text(value, fontWeight = if (isBold) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
+    }
 }

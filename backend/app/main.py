@@ -79,6 +79,7 @@ from app.routers import webhooks
 from app.routers import transactions
 from app.routers import pumps
 from app.routers import pump_ops
+from app.routers import config
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(wallet.router, prefix="/api/v1/wallet", tags=["wallet"])
@@ -89,6 +90,7 @@ app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"]
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(pumps.router, prefix="/api/v1/pumps", tags=["pumps"])
 app.include_router(pump_ops.router)
+app.include_router(config.router)
 
 
 # ── Health ─────────────────────────────────────────────────────────────

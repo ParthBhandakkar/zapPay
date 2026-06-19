@@ -26,8 +26,10 @@ object Routes {
     const val PUMP_SETTINGS = "pump_settings"
     const val SETUP_PUMP = "setup_pump"
     const val PUMP_PROFILE = "pump_profile"
+    const val TRANSACTION_DETAIL = "transaction_detail/{transactionId}"
 
     fun loginRoute(role: String) = "login/$role"
+    fun transactionDetailRoute(transactionId: String) = "transaction_detail/$transactionId"
 }
 
 @Composable
@@ -107,7 +109,13 @@ fun ZapPayNavGraph(
 
         composable(Routes.CUSTOMER_HISTORY) {
             val vm: CustomerViewModel = hiltViewModel()
-            HistoryScreen(viewModel = vm, onBack = { navController.popBackStack() })
+            HistoryScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onTransactionClick = { transactionId ->
+                    navController.navigate(Routes.transactionDetailRoute(transactionId))
+                },
+            )
         }
 
         composable(Routes.CUSTOMER_PROFILE) {
@@ -174,6 +182,15 @@ fun ZapPayNavGraph(
                 },
                 onBack = { navController.popBackStack() },
             )
+        }
+
+        // ── Transaction Detail ──
+        composable(
+            route = Routes.TRANSACTION_DETAIL,
+            arguments = listOf(navArgument("transactionId") { type = NavType.StringType }),
+        ) {
+            val vm: TransactionDetailViewModel = hiltViewModel()
+            TransactionDetailScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
     }
 }

@@ -31,6 +31,10 @@ import com.zappay.app.ui.pump.PumpViewModel;
 import com.zappay.app.ui.pump.PumpViewModel_HiltModules;
 import com.zappay.app.ui.pump.PumpViewModel_HiltModules_BindsModule_Binds_LazyMapKey;
 import com.zappay.app.ui.pump.PumpViewModel_HiltModules_KeyModule_Provide_LazyMapKey;
+import com.zappay.app.ui.pump.TransactionDetailViewModel;
+import com.zappay.app.ui.pump.TransactionDetailViewModel_HiltModules;
+import com.zappay.app.ui.pump.TransactionDetailViewModel_HiltModules_BindsModule_Binds_LazyMapKey;
+import com.zappay.app.ui.pump.TransactionDetailViewModel_HiltModules_KeyModule_Provide_LazyMapKey;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
 import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
@@ -393,7 +397,7 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
 
     @Override
     public Map<Class<?>, Boolean> getViewModelKeys() {
-      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(3).put(AuthViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, AuthViewModel_HiltModules.KeyModule.provide()).put(CustomerViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, CustomerViewModel_HiltModules.KeyModule.provide()).put(PumpViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, PumpViewModel_HiltModules.KeyModule.provide()).build());
+      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(4).put(AuthViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, AuthViewModel_HiltModules.KeyModule.provide()).put(CustomerViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, CustomerViewModel_HiltModules.KeyModule.provide()).put(PumpViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, PumpViewModel_HiltModules.KeyModule.provide()).put(TransactionDetailViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, TransactionDetailViewModel_HiltModules.KeyModule.provide()).build());
     }
 
     @Override
@@ -413,6 +417,8 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
   }
 
   private static final class ViewModelCImpl extends ZapPayApplication_HiltComponents.ViewModelC {
+    private final SavedStateHandle savedStateHandle;
+
     private final SingletonCImpl singletonCImpl;
 
     private final ActivityRetainedCImpl activityRetainedCImpl;
@@ -425,12 +431,14 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
 
     private Provider<PumpViewModel> pumpViewModelProvider;
 
+    private Provider<TransactionDetailViewModel> transactionDetailViewModelProvider;
+
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
         ViewModelLifecycle viewModelLifecycleParam) {
       this.singletonCImpl = singletonCImpl;
       this.activityRetainedCImpl = activityRetainedCImpl;
-
+      this.savedStateHandle = savedStateHandleParam;
       initialize(savedStateHandleParam, viewModelLifecycleParam);
 
     }
@@ -441,11 +449,12 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
       this.authViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
       this.customerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
       this.pumpViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.transactionDetailViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
     }
 
     @Override
     public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(3).put(AuthViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) authViewModelProvider)).put(CustomerViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) customerViewModelProvider)).put(PumpViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) pumpViewModelProvider)).build());
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(4).put(AuthViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) authViewModelProvider)).put(CustomerViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) customerViewModelProvider)).put(PumpViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) pumpViewModelProvider)).put(TransactionDetailViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) transactionDetailViewModelProvider)).build());
     }
 
     @Override
@@ -482,6 +491,9 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
 
           case 2: // com.zappay.app.ui.pump.PumpViewModel 
           return (T) new PumpViewModel(singletonCImpl.pumpRepositoryProvider.get(), singletonCImpl.walletRepositoryProvider.get());
+
+          case 3: // com.zappay.app.ui.pump.TransactionDetailViewModel 
+          return (T) new TransactionDetailViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.transactionRepositoryProvider.get());
 
           default: throw new AssertionError(id);
         }

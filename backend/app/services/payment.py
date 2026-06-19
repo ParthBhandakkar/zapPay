@@ -1,8 +1,9 @@
 import asyncio
+import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 import razorpay
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import (
+    IdempotencyKey,
     PetrolPump,
     QRCode,
     Transaction,
@@ -23,6 +25,52 @@ from app.models import (
 from app.services.notifications import notify_fuel_purchase, notify_wallet_recharge
 
 logger = logging.getLogger("zappay.services.payment")
+
+IDEMPOTENCY_TTL_HOURS = 24
+
+
+def _request_hash(payload: Dict[str, Any]) -> str:
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def check_idempotency(db: Session, idempotency_key: str, request_hash: str) -> Optional[Dict[str, Any]]:
+    record = db.query(IdempotencyKey).filter(
+        IdempotencyKey.idempotency_key == idempotency_key
+    ).first()
+    if not record:
+        return None
+    if record.request_hash != request_hash:
+        return {"conflict": True, "message": "Idempotency key already used with different request"}
+    # Only return cached result if it was a completed (successful) response
+    if record.status == "completed" and record.response_body:
+        try:
+            return json.loads(record.response_body)
+        except Exception:
+            return None
+    # For failed records, allow retry by returning None (caller will re-process)
+    return None
+
+
+def save_idempotency(db: Session, idempotency_key: str, request_hash: str, response: Dict[str, Any], transaction_id: Optional[str] = None):
+    record = db.query(IdempotencyKey).filter(
+        IdempotencyKey.idempotency_key == idempotency_key
+    ).first()
+    if record:
+        record.response_body = json.dumps(response, default=str)
+        record.transaction_id = transaction_id or record.transaction_id
+        record.status = response.get("success", False) and "completed" or "failed"
+    else:
+        record = IdempotencyKey(
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            status="completed" if response.get("success") else "failed",
+            response_body=json.dumps(response, default=str),
+            transaction_id=transaction_id,
+            expires_at=datetime.utcnow() + timedelta(hours=IDEMPOTENCY_TTL_HOURS),
+        )
+        db.add(record)
+    db.commit()
 
 # ── Payment Gateway Clients ────────────────────────────────────────────
 razorpay_client = None
@@ -143,26 +191,50 @@ def create_stripe_payment_intent(amount: float, currency: str = "inr", user_id: 
 
 
 # ── Fuel Purchase ──────────────────────────────────────────────────────
-def process_fuel_purchase(db: Session, qr_code: str, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float) -> Dict[str, Any]:
+def process_fuel_purchase(db: Session, qr_code: str, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float, idempotency_key: Optional[str] = None) -> Dict[str, Any]:
     from app.services.qr_service import validate_qr_code
+
+    if idempotency_key:
+        req_hash = _request_hash({"qr_code": qr_code, "pump_id": pump_id, "fuel_type": fuel_type, "fuel_quantity": fuel_quantity, "fuel_rate": fuel_rate})
+        cached = check_idempotency(db, idempotency_key, req_hash)
+        if cached:
+            if cached.get("conflict"):
+                return {"success": False, "message": cached["message"]}
+            return cached
 
     qr_validation = validate_qr_code(db, qr_code)
     if not qr_validation:
         logger.warning("Fuel purchase: QR validation failed")
-        return {"success": False, "message": "Invalid QR code"}
+        result = {"success": False, "message": "Invalid QR code"}
+        if idempotency_key:
+            save_idempotency(db, idempotency_key, req_hash, result)
+        return result
 
     user, qr_record = qr_validation
-    return _process_payment(db, user, pump_id, fuel_type, fuel_quantity, fuel_rate, qr_record.id)
+    result = _process_payment(db, user, pump_id, fuel_type, fuel_quantity, fuel_rate, qr_record.id, idempotency_key)
+    return result
 
 
-def process_fuel_purchase_by_user(db: Session, user_id: int, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float) -> Dict[str, Any]:
+def process_fuel_purchase_by_user(db: Session, user_id: int, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float, idempotency_key: Optional[str] = None) -> Dict[str, Any]:
+    if idempotency_key:
+        req_hash = _request_hash({"user_id": user_id, "pump_id": pump_id, "fuel_type": fuel_type, "fuel_quantity": fuel_quantity, "fuel_rate": fuel_rate})
+        cached = check_idempotency(db, idempotency_key, req_hash)
+        if cached:
+            if cached.get("conflict"):
+                return {"success": False, "message": cached["message"]}
+            return cached
+
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if not user:
-        return {"success": False, "message": "User not found"}
-    return _process_payment(db, user, pump_id, fuel_type, fuel_quantity, fuel_rate, qr_code_id=None)
+        result = {"success": False, "message": "User not found"}
+        if idempotency_key:
+            save_idempotency(db, idempotency_key, req_hash, result)
+        return result
+    result = _process_payment(db, user, pump_id, fuel_type, fuel_quantity, fuel_rate, qr_code_id=None, idempotency_key=idempotency_key)
+    return result
 
 
-def _process_payment(db: Session, user: User, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float, qr_code_id: Optional[int] = None) -> Dict[str, Any]:
+def _process_payment(db: Session, user: User, pump_id: int, fuel_type: str, fuel_quantity: float, fuel_rate: float, qr_code_id: Optional[int] = None, idempotency_key: Optional[str] = None) -> Dict[str, Any]:
     pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id, PetrolPump.is_active == True).first()
     if not pump:
         logger.warning("Pump not found: id=%d", pump_id)
@@ -206,19 +278,29 @@ def _process_payment(db: Session, user: User, pump_id: int, fuel_type: str, fuel
         ))
 
         logger.info("Fuel purchase completed: txn=%s user=%s pump=%s amount=%.2f", transaction.transaction_id, user.id, pump_id, total_amount)
-        return {
+        result = {
             "success": True,
             "message": "Fuel purchase successful",
             "transaction_id": transaction.transaction_id,
+            "receipt_number": f"RCP-{transaction.transaction_id}",
             "amount": total_amount,
             "fuel_quantity": fuel_quantity,
             "fuel_type": fuel_type,
+            "fuel_rate": fuel_rate,
             "remaining_balance": wallet.balance,
+            "pump_name": pump.pump_name,
+            "customer_name": user.full_name,
         }
+        if idempotency_key:
+            save_idempotency(db, idempotency_key, _request_hash({}), result, transaction.transaction_id)
+        return result
     except Exception as e:
         db.rollback()
         logger.error("Fuel purchase failed: %s", e)
-        return {"success": False, "message": f"Transaction failed: {e}"}
+        result = {"success": False, "message": f"Transaction failed: {e}"}
+        if idempotency_key:
+            save_idempotency(db, idempotency_key, _request_hash({}), result)
+        return result
 
 
 # ── Transaction History ────────────────────────────────────────────────

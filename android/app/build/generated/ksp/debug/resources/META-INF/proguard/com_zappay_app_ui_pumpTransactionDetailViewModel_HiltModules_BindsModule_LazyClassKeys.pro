@@ -1,0 +1,5 @@
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.auth.AuthViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.auth.AuthViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.PumpViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.PumpViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.TransactionDetailViewModel

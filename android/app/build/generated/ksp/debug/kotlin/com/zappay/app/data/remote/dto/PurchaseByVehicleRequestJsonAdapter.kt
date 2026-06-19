@@ -11,19 +11,21 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
 import kotlin.Double
 import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class PurchaseByVehicleRequestJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PurchaseByVehicleRequest>() {
   private val options: JsonReader.Options = JsonReader.Options.of("user_id", "pump_id", "fuel_type",
-      "fuel_quantity", "fuel_rate")
+      "fuel_quantity", "fuel_rate", "idempotency_key")
 
   private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(), "userId")
 
@@ -32,6 +34,12 @@ public class PurchaseByVehicleRequestJsonAdapter(
 
   private val doubleAdapter: JsonAdapter<Double> = moshi.adapter(Double::class.java, emptySet(),
       "fuelQuantity")
+
+  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
+      emptySet(), "idempotencyKey")
+
+  @Volatile
+  private var constructorRef: Constructor<PurchaseByVehicleRequest>? = null
 
   public override fun toString(): String = buildString(46) {
       append("GeneratedJsonAdapter(").append("PurchaseByVehicleRequest").append(')') }
@@ -42,6 +50,8 @@ public class PurchaseByVehicleRequestJsonAdapter(
     var fuelType: String? = null
     var fuelQuantity: Double? = null
     var fuelRate: Double? = null
+    var idempotencyKey: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -55,6 +65,11 @@ public class PurchaseByVehicleRequestJsonAdapter(
             throw Util.unexpectedNull("fuelQuantity", "fuel_quantity", reader)
         4 -> fuelRate = doubleAdapter.fromJson(reader) ?: throw Util.unexpectedNull("fuelRate",
             "fuel_rate", reader)
+        5 -> {
+          idempotencyKey = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -63,14 +78,36 @@ public class PurchaseByVehicleRequestJsonAdapter(
       }
     }
     reader.endObject()
-    return PurchaseByVehicleRequest(
-        userId = userId ?: throw Util.missingProperty("userId", "user_id", reader),
-        pumpId = pumpId ?: throw Util.missingProperty("pumpId", "pump_id", reader),
-        fuelType = fuelType ?: throw Util.missingProperty("fuelType", "fuel_type", reader),
-        fuelQuantity = fuelQuantity ?: throw Util.missingProperty("fuelQuantity", "fuel_quantity",
-            reader),
-        fuelRate = fuelRate ?: throw Util.missingProperty("fuelRate", "fuel_rate", reader)
-    )
+    if (mask0 == 0xffffffdf.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  PurchaseByVehicleRequest(
+          userId = userId ?: throw Util.missingProperty("userId", "user_id", reader),
+          pumpId = pumpId ?: throw Util.missingProperty("pumpId", "pump_id", reader),
+          fuelType = fuelType ?: throw Util.missingProperty("fuelType", "fuel_type", reader),
+          fuelQuantity = fuelQuantity ?: throw Util.missingProperty("fuelQuantity", "fuel_quantity",
+              reader),
+          fuelRate = fuelRate ?: throw Util.missingProperty("fuelRate", "fuel_rate", reader),
+          idempotencyKey = idempotencyKey
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<PurchaseByVehicleRequest> = this.constructorRef ?:
+          PurchaseByVehicleRequest::class.java.getDeclaredConstructor(Int::class.javaPrimitiveType,
+          Int::class.javaPrimitiveType, String::class.java, Double::class.javaPrimitiveType,
+          Double::class.javaPrimitiveType, String::class.java, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
+      return localConstructor.newInstance(
+          userId ?: throw Util.missingProperty("userId", "user_id", reader),
+          pumpId ?: throw Util.missingProperty("pumpId", "pump_id", reader),
+          fuelType ?: throw Util.missingProperty("fuelType", "fuel_type", reader),
+          fuelQuantity ?: throw Util.missingProperty("fuelQuantity", "fuel_quantity", reader),
+          fuelRate ?: throw Util.missingProperty("fuelRate", "fuel_rate", reader),
+          idempotencyKey,
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: PurchaseByVehicleRequest?): Unit {
@@ -88,6 +125,8 @@ public class PurchaseByVehicleRequestJsonAdapter(
     doubleAdapter.toJson(writer, value_.fuelQuantity)
     writer.name("fuel_rate")
     doubleAdapter.toJson(writer, value_.fuelRate)
+    writer.name("idempotency_key")
+    nullableStringAdapter.toJson(writer, value_.idempotencyKey)
     writer.endObject()
   }
 }

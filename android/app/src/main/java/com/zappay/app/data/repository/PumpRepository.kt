@@ -3,6 +3,7 @@ package com.zappay.app.data.repository
 import com.zappay.app.data.remote.api.ZapPayApi
 import com.zappay.app.data.remote.dto.*
 import com.zappay.app.util.Resource
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,9 +71,10 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun processPurchase(request: FuelPurchaseRequest): Resource<GenericResponse> {
+    suspend fun processPurchase(request: FuelPurchaseRequest, idempotencyKey: String = UUID.randomUUID().toString()): Resource<GenericResponse> {
         return try {
-            val response = api.fuelPurchase(request)
+            val req = request.copy(idempotencyKey = idempotencyKey)
+            val response = api.fuelPurchase(req)
             if (response.isSuccessful) Resource.Success(response.body()!!)
             else Resource.Error(response.errorBody()?.string() ?: "Purchase failed")
         } catch (e: Exception) {
@@ -80,9 +82,10 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun processPurchaseByVehicle(request: PurchaseByVehicleRequest): Resource<GenericResponse> {
+    suspend fun processPurchaseByVehicle(request: PurchaseByVehicleRequest, idempotencyKey: String = UUID.randomUUID().toString()): Resource<GenericResponse> {
         return try {
-            val response = api.fuelPurchaseByVehicle(request)
+            val req = request.copy(idempotencyKey = idempotencyKey)
+            val response = api.fuelPurchaseByVehicle(req)
             if (response.isSuccessful) Resource.Success(response.body()!!)
             else Resource.Error(response.errorBody()?.string() ?: "Purchase failed")
         } catch (e: Exception) {
