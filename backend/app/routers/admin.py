@@ -404,7 +404,7 @@ async def get_all_settlements(
     
     total_count = query.count()
     offset = (page - 1) * page_size
-    settlements = query.order_by(Settlement.created_at.desc()).offset(offset).limit(page_size).all()
+    settlements = query.order_by(Settlement.settlement_date.desc()).offset(offset).limit(page_size).all()
     
     return {
         "settlements": settlements,

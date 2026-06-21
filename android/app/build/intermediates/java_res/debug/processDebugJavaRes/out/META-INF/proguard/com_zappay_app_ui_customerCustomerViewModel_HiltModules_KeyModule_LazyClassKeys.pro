@@ -4,5 +4,15 @@
 -keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.PumpViewModel
 -keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.TransactionDetailViewModel
 -keep,allowobfuscation,allowshrinking class com.zappay.app.ui.pump.TransactionDetailViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.NotificationsViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.NotificationsViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.VehiclesViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.VehiclesViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.PumpDetailViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.PumpDetailViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.NearbyPumpsViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.NearbyPumpsViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.SupportTicketsViewModel
+-keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.SupportTicketsViewModel
 -keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.CustomerViewModel
 -keep,allowobfuscation,allowshrinking class com.zappay.app.ui.customer.CustomerViewModel

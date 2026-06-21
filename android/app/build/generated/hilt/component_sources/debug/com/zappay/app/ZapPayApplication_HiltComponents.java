@@ -4,6 +4,11 @@ import com.zappay.app.di.AppModule;
 import com.zappay.app.di.NetworkModule;
 import com.zappay.app.ui.auth.AuthViewModel_HiltModules;
 import com.zappay.app.ui.customer.CustomerViewModel_HiltModules;
+import com.zappay.app.ui.customer.NearbyPumpsViewModel_HiltModules;
+import com.zappay.app.ui.customer.NotificationsViewModel_HiltModules;
+import com.zappay.app.ui.customer.PumpDetailViewModel_HiltModules;
+import com.zappay.app.ui.customer.SupportTicketsViewModel_HiltModules;
+import com.zappay.app.ui.customer.VehiclesViewModel_HiltModules;
 import com.zappay.app.ui.pump.PumpViewModel_HiltModules;
 import com.zappay.app.ui.pump.TransactionDetailViewModel_HiltModules;
 import dagger.Binds;
@@ -162,8 +167,13 @@ public final class ZapPayApplication_HiltComponents {
           CustomerViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
+          NearbyPumpsViewModel_HiltModules.KeyModule.class,
+          NotificationsViewModel_HiltModules.KeyModule.class,
+          PumpDetailViewModel_HiltModules.KeyModule.class,
           PumpViewModel_HiltModules.KeyModule.class,
+          SupportTicketsViewModel_HiltModules.KeyModule.class,
           TransactionDetailViewModel_HiltModules.KeyModule.class,
+          VehiclesViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class
       }
@@ -204,8 +214,13 @@ public final class ZapPayApplication_HiltComponents {
           AuthViewModel_HiltModules.BindsModule.class,
           CustomerViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
+          NearbyPumpsViewModel_HiltModules.BindsModule.class,
+          NotificationsViewModel_HiltModules.BindsModule.class,
+          PumpDetailViewModel_HiltModules.BindsModule.class,
           PumpViewModel_HiltModules.BindsModule.class,
-          TransactionDetailViewModel_HiltModules.BindsModule.class
+          SupportTicketsViewModel_HiltModules.BindsModule.class,
+          TransactionDetailViewModel_HiltModules.BindsModule.class,
+          VehiclesViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

@@ -20,6 +20,10 @@ fun CustomerDashboardScreen(
     onNavigateToWallet: () -> Unit,
     onNavigateToQR: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToVehicles: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToTickets: () -> Unit = {},
+    onNavigateToNearbyPumps: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -84,6 +88,41 @@ fun CustomerDashboardScreen(
                             Text("Q", fontSize = 24.sp, color = Purple500)
                             Spacer(Modifier.height(4.dp))
                             Text("My QR", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ZapPayCard(modifier = Modifier.weight(1f), onClick = onNavigateToVehicles) {
+                        Column(Modifier.padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            Text("V", fontSize = 24.sp, color = Purple500)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Vehicles", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        }
+                    }
+                    ZapPayCard(modifier = Modifier.weight(1f), onClick = onNavigateToNotifications) {
+                        Column(Modifier.padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            Text("N", fontSize = 24.sp, color = Purple500)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Alerts", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ZapPayCard(modifier = Modifier.weight(1f), onClick = onNavigateToTickets) {
+                        Column(Modifier.padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            Text("S", fontSize = 24.sp, color = Purple500)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Support", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        }
+                    }
+                    ZapPayCard(modifier = Modifier.weight(1f), onClick = onNavigateToNearbyPumps) {
+                        Column(Modifier.padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            Text("P", fontSize = 24.sp, color = Purple500)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Pumps", fontWeight = FontWeight.Medium, fontSize = 13.sp)
                         }
                     }
                 }

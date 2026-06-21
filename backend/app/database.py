@@ -25,7 +25,9 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-_connect_args = {"sslmode": "require", "connect_timeout": 10} if settings.is_supabase else {"connect_timeout": 10}
+_connect_args = {"sslmode": "require", "connect_timeout": 10} if settings.is_supabase else {}
+if settings.database_url.startswith("sqlite"):
+    _connect_args = {"check_same_thread": False, "timeout": 10}
 
 engine = create_engine(
     settings.database_url_with_ssl,

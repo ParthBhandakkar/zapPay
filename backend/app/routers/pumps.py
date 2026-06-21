@@ -184,7 +184,7 @@ async def get_nearby_pumps(
                 "latitude": pump.latitude,
                 "longitude": pump.longitude,
                 "distance_km": round(distance, 2),
-                "fuel_types": json.loads(pump.fuel_types) if pump.fuel_types else []
+                "fuel_types": pump.fuel_types.split(",") if pump.fuel_types else []
             }
             nearby_pumps.append(pump_data)
     

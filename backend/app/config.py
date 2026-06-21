@@ -89,7 +89,14 @@ class Settings(BaseSettings):
     def database_url_with_ssl(self) -> str:
         from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-        parsed = urlparse(self.database_url)
+        url = self.database_url
+
+        # SQLite URLs don't need SSL and urlunparse mangles them.
+        # Return them unchanged.
+        if url.startswith("sqlite"):
+            return url
+
+        parsed = urlparse(url)
         qs = parse_qs(parsed.query, keep_blank_values=True)
 
         if self.is_supabase and "sslmode" not in qs:
