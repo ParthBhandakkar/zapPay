@@ -48,7 +48,8 @@ async def generate_qr_code(
         db=db,
         user_id=user.id,
         qr_type=qr_data.qr_type,
-        validity_hours=qr_data.validity_hours
+        validity_hours=qr_data.validity_hours,
+        vehicle_id=qr_data.vehicle_id
     )
     
     # Ensure expires_at is ISO formatted with Z for UTC

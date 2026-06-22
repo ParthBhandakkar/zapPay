@@ -879,4 +879,32 @@ async def add_fleet_driver(
     d = FleetDriver(fleet_id=fleet_id, user_id=driver_data.user_id, daily_limit=driver_data.daily_limit)
     db.add(d)
     db.commit()
-    return BaseResponse(success=True, message="Fleet driver added") 
+    return BaseResponse(success=True, message="Fleet driver added")
+
+
+# ── Temporary: Clear Database (REMOVE AFTER USE) ──
+
+CLEAR_DB_TABLES = [
+    "notification_events", "audit_events", "disputes", "support_tickets",
+    "fraud_rule_hits", "fraud_rules", "blacklist_entries",
+    "fleet_drivers", "fleet_vehicles", "fleet_accounts",
+    "refund_requests", "transactions", "settlements",
+    "wallet_transactions", "settlement_details",
+    "qr_codes", "favorite_pumps", "user_vehicles",
+    "pump_operations_log", "pump_fuel_prices", "pump_inventory",
+    "pump_payment_credentials", "petrol_pumps",
+    "users",
+]
+
+@router.post("/clear-database", response_model=BaseResponse)
+async def clear_database(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    admin_user = get_current_user(db, credentials.credentials)
+    verify_admin_access(admin_user)
+
+    for table in CLEAR_DB_TABLES:
+        db.execute(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE")
+    db.commit()
+    return BaseResponse(success=True, message="Database cleared successfully") 

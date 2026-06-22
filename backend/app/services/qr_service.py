@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from PIL import Image
 from sqlalchemy.orm import Session
-from app.models import User, QRCode
+from app.models import User, QRCode, UserVehicle
 from app.config import settings
 import json
 from cryptography.fernet import Fernet, InvalidToken
@@ -85,25 +85,41 @@ def create_qr_code_image(qr_data: str, size: int = 300) -> Tuple[str, str]:
     return base64_image, file_path
 
 def generate_user_qr_code(db: Session, user_id: int, qr_type: str = "mobile", 
-                         validity_hours: Optional[int] = None) -> QRCode:
+                         validity_hours: Optional[int] = None,
+                         vehicle_id: Optional[int] = None) -> QRCode:
     """Generate and store QR code for a user."""
-    # Deactivate existing QR codes of the same type
-    existing_qrs = db.query(QRCode).filter(
-        QRCode.user_id == user_id,
-        QRCode.qr_type == qr_type,
-        QRCode.is_active == True
-    ).all()
-    
-    for qr in existing_qrs:
-        qr.is_active = False
-    
-    # Get user details for QR data
+    # Get user details
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise ValueError("User not found")
 
+    # If vehicle_id is provided, get vehicle details
+    vehicle_number = None
+    vehicle = None
+    if vehicle_id:
+        vehicle = db.query(UserVehicle).filter(
+            UserVehicle.id == vehicle_id,
+            UserVehicle.user_id == user_id
+        ).first()
+        if not vehicle:
+            raise ValueError("Vehicle not found")
+        vehicle_number = vehicle.vehicle_number
+
+    # Deactivate existing QR codes for this vehicle+type combo
+    filter_conditions = [
+        QRCode.user_id == user_id,
+        QRCode.qr_type == qr_type,
+        QRCode.is_active == True
+    ]
+    if vehicle_id:
+        filter_conditions.append(QRCode.vehicle_id == vehicle_id)
+    
+    existing_qrs = db.query(QRCode).filter(*filter_conditions).all()
+    for qr in existing_qrs:
+        qr.is_active = False
+
     # Generate new QR code data
-    qr_data = generate_qr_code_data(user_id, user.phone_number, user.vehicle_number, qr_type)
+    qr_data = generate_qr_code_data(user_id, user.phone_number, vehicle_number, qr_type)
     
     # Create QR code image
     base64_image, file_path = create_qr_code_image(qr_data)
@@ -116,6 +132,7 @@ def generate_user_qr_code(db: Session, user_id: int, qr_type: str = "mobile",
     # Store in database
     qr_code = QRCode(
         user_id=user_id,
+        vehicle_id=vehicle_id,
         qr_code=qr_data,
         qr_image_path=file_path,
         qr_type=qr_type,

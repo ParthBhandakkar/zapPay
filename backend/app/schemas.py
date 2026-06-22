@@ -178,6 +178,7 @@ class QRCodeResponse(BaseModel):
     qr_image_path: Optional[str] = None
     qr_type: str
     is_active: bool
+    vehicle_id: Optional[int] = None
     created_at: datetime
     expires_at: Optional[datetime] = None
 
@@ -186,6 +187,7 @@ class QRCodeResponse(BaseModel):
 
 class QRCodeGenerate(BaseModel):
     qr_type: str = "mobile"
+    vehicle_id: Optional[int] = None
     validity_hours: Optional[int] = None
 
 

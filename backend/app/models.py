@@ -117,6 +117,7 @@ class QRCode(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    vehicle_id = Column(Integer, ForeignKey("user_vehicles.id"), nullable=True)
     qr_code = Column(String(255), unique=True, index=True, nullable=False)
     qr_image_path = Column(String(500))
     is_active = Column(Boolean, default=True)
@@ -125,6 +126,7 @@ class QRCode(Base):
     expires_at = Column(DateTime(timezone=True))
 
     user = relationship("User", back_populates="qr_codes")
+    vehicle = relationship("UserVehicle", backref="qr_codes")
     transactions = relationship("Transaction", back_populates="qr_code")
 
     def __repr__(self):
