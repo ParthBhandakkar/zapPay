@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
+from app.config import settings
 from app.database import get_db
 from app.schemas import (
     UserProfile, PetrolPumpResponse, BaseResponse, AdminDashboard,
@@ -898,11 +899,11 @@ CLEAR_DB_TABLES = [
 
 @router.post("/clear-database", response_model=BaseResponse)
 async def clear_database(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    secret: str = Header(None, alias="X-Clear-Secret"),
     db: Session = Depends(get_db)
 ):
-    admin_user = get_current_user(db, credentials.credentials)
-    verify_admin_access(admin_user)
+    if not settings.clear_db_secret or secret != settings.clear_db_secret:
+        raise HTTPException(status_code=403, detail="Invalid or missing clear secret")
 
     for table in CLEAR_DB_TABLES:
         db.execute(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE")
