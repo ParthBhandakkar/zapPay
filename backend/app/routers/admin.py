@@ -905,7 +905,8 @@ async def clear_database(
     if settings.clear_db_secret and secret != settings.clear_db_secret:
         raise HTTPException(status_code=403, detail="Invalid or missing clear secret")
 
+    from sqlalchemy import text
     for table in CLEAR_DB_TABLES:
-        db.execute(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE")
+        db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
     db.commit()
     return BaseResponse(success=True, message="Database cleared successfully") 
