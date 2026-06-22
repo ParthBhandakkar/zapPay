@@ -23,7 +23,7 @@ public class QRCodeResponseJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<QRCodeResponse>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "qr_code", "is_active",
-      "expires_at")
+      "vehicle_id", "expires_at")
 
   private val intAdapter: JsonAdapter<Int> = moshi.adapter(Int::class.java, emptySet(), "id")
 
@@ -32,6 +32,9 @@ public class QRCodeResponseJsonAdapter(
 
   private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
       "isActive")
+
+  private val nullableIntAdapter: JsonAdapter<Int?> = moshi.adapter(Int::class.javaObjectType,
+      emptySet(), "vehicleId")
 
   private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
       emptySet(), "expiresAt")
@@ -43,6 +46,7 @@ public class QRCodeResponseJsonAdapter(
     var id: Int? = null
     var qrCode: String? = null
     var isActive: Boolean? = null
+    var vehicleId: Int? = null
     var expiresAt: String? = null
     reader.beginObject()
     while (reader.hasNext()) {
@@ -52,7 +56,8 @@ public class QRCodeResponseJsonAdapter(
             "qr_code", reader)
         2 -> isActive = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("isActive",
             "is_active", reader)
-        3 -> expiresAt = nullableStringAdapter.fromJson(reader)
+        3 -> vehicleId = nullableIntAdapter.fromJson(reader)
+        4 -> expiresAt = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -65,6 +70,7 @@ public class QRCodeResponseJsonAdapter(
         id = id ?: throw Util.missingProperty("id", "id", reader),
         qrCode = qrCode ?: throw Util.missingProperty("qrCode", "qr_code", reader),
         isActive = isActive ?: throw Util.missingProperty("isActive", "is_active", reader),
+        vehicleId = vehicleId,
         expiresAt = expiresAt
     )
   }
@@ -80,6 +86,8 @@ public class QRCodeResponseJsonAdapter(
     stringAdapter.toJson(writer, value_.qrCode)
     writer.name("is_active")
     booleanAdapter.toJson(writer, value_.isActive)
+    writer.name("vehicle_id")
+    nullableIntAdapter.toJson(writer, value_.vehicleId)
     writer.name("expires_at")
     nullableStringAdapter.toJson(writer, value_.expiresAt)
     writer.endObject()

@@ -23,13 +23,14 @@ import kotlin.text.buildString
 public class QRCodeGenerateRequestJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<QRCodeGenerateRequest>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("qr_type", "validity_hours")
+  private val options: JsonReader.Options = JsonReader.Options.of("qr_type", "vehicle_id",
+      "validity_hours")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "qrType")
 
   private val nullableIntAdapter: JsonAdapter<Int?> = moshi.adapter(Int::class.javaObjectType,
-      emptySet(), "validityHours")
+      emptySet(), "vehicleId")
 
   @Volatile
   private var constructorRef: Constructor<QRCodeGenerateRequest>? = null
@@ -39,6 +40,7 @@ public class QRCodeGenerateRequestJsonAdapter(
 
   public override fun fromJson(reader: JsonReader): QRCodeGenerateRequest {
     var qrType: String? = null
+    var vehicleId: Int? = null
     var validityHours: Int? = null
     var mask0 = -1
     reader.beginObject()
@@ -51,9 +53,14 @@ public class QRCodeGenerateRequestJsonAdapter(
           mask0 = mask0 and 0xfffffffe.toInt()
         }
         1 -> {
-          validityHours = nullableIntAdapter.fromJson(reader)
+          vehicleId = nullableIntAdapter.fromJson(reader)
           // $mask = $mask and (1 shl 1).inv()
           mask0 = mask0 and 0xfffffffd.toInt()
+        }
+        2 -> {
+          validityHours = nullableIntAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 2).inv()
+          mask0 = mask0 and 0xfffffffb.toInt()
         }
         -1 -> {
           // Unknown name, skip it.
@@ -63,10 +70,11 @@ public class QRCodeGenerateRequestJsonAdapter(
       }
     }
     reader.endObject()
-    if (mask0 == 0xfffffffc.toInt()) {
+    if (mask0 == 0xfffffff8.toInt()) {
       // All parameters with defaults are set, invoke the constructor directly
       return  QRCodeGenerateRequest(
           qrType = qrType as String,
+          vehicleId = vehicleId,
           validityHours = validityHours
       )
     } else {
@@ -74,10 +82,11 @@ public class QRCodeGenerateRequestJsonAdapter(
       @Suppress("UNCHECKED_CAST")
       val localConstructor: Constructor<QRCodeGenerateRequest> = this.constructorRef ?:
           QRCodeGenerateRequest::class.java.getDeclaredConstructor(String::class.java,
-          Int::class.javaObjectType, Int::class.javaPrimitiveType,
+          Int::class.javaObjectType, Int::class.javaObjectType, Int::class.javaPrimitiveType,
           Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
       return localConstructor.newInstance(
           qrType,
+          vehicleId,
           validityHours,
           mask0,
           /* DefaultConstructorMarker */ null
@@ -92,6 +101,8 @@ public class QRCodeGenerateRequestJsonAdapter(
     writer.beginObject()
     writer.name("qr_type")
     stringAdapter.toJson(writer, value_.qrType)
+    writer.name("vehicle_id")
+    nullableIntAdapter.toJson(writer, value_.vehicleId)
     writer.name("validity_hours")
     nullableIntAdapter.toJson(writer, value_.validityHours)
     writer.endObject()

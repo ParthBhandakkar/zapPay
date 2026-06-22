@@ -24,10 +24,10 @@ interface ZapPayApi {
 
     // ── Profile ────────────────────────────────────────────────────────
     @GET("users/profile")
-    suspend fun getProfile(): Response<GenericResponse>
+    suspend fun getProfile(): Response<UserProfileDto>
 
     @PUT("users/profile")
-    suspend fun updateProfile(@Body body: Map<String, String>): Response<GenericResponse>
+    suspend fun updateProfile(@Body body: Map<String, String>): Response<UserProfileDto>
 
     @POST("users/kyc/submit")
     suspend fun submitKYC(@Body body: Map<String, String>): Response<GenericResponse>

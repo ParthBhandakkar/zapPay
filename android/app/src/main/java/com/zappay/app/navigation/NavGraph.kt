@@ -1,17 +1,24 @@
 package com.zappay.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.zappay.app.data.remote.dto.UserProfileDto
 import com.zappay.app.ui.auth.AuthViewModel
 import com.zappay.app.ui.auth.LoginScreen
 import com.zappay.app.ui.auth.WelcomeScreen
 import com.zappay.app.ui.customer.*
 import com.zappay.app.ui.pump.*
+import com.zappay.app.util.LocationHelper
 
 object Routes {
     const val WELCOME = "welcome"
@@ -137,9 +144,11 @@ fun ZapPayNavGraph(
 
         composable(Routes.CUSTOMER_PROFILE) {
             val vm: CustomerViewModel = hiltViewModel()
+            LaunchedEffect(Unit) { vm.loadProfile() }
+            val state = vm.uiState.collectAsState().value
             ProfileScreen(
-                userName = null,
-                userPhone = null,
+                userName = state.profile?.fullName,
+                userPhone = state.profile?.phoneNumber,
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Routes.WELCOME) {
@@ -148,6 +157,8 @@ fun ZapPayNavGraph(
                 },
                 onBack = { navController.popBackStack() },
                 viewModel = vm,
+                profileData = state.profile,
+                onSaveProfile = { body -> vm.saveProfile(body) },
             )
         }
 
@@ -168,8 +179,11 @@ fun ZapPayNavGraph(
 
         composable(Routes.NEARBY_PUMPS) {
             val vm: NearbyPumpsViewModel = hiltViewModel()
+            val context = LocalContext.current
+            val locationHelper = remember { LocationHelper(context) }
             NearbyPumpsScreen(
                 viewModel = vm,
+                locationHelper = locationHelper,
                 onBack = { navController.popBackStack() },
                 onPumpClick = { pump ->
                     navController.navigate(
@@ -223,8 +237,11 @@ fun ZapPayNavGraph(
 
         composable(Routes.SETUP_PUMP) {
             val vm: PumpViewModel = hiltViewModel()
+            val context = LocalContext.current
+            val locationHelper = remember { LocationHelper(context) }
             SetupPumpScreen(
                 viewModel = vm,
+                locationHelper = locationHelper,
                 onBack = { navController.popBackStack() },
                 onSuccess = {
                     navController.navigate(Routes.PUMP_DASHBOARD) {

@@ -902,7 +902,7 @@ async def clear_database(
     secret: str = Header(None, alias="X-Clear-Secret"),
     db: Session = Depends(get_db)
 ):
-    if not settings.clear_db_secret or secret != settings.clear_db_secret:
+    if settings.clear_db_secret and secret != settings.clear_db_secret:
         raise HTTPException(status_code=403, detail="Invalid or missing clear secret")
 
     for table in CLEAR_DB_TABLES:

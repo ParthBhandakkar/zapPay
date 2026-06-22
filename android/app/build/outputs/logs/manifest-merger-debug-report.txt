@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-28:12
-INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-28:12
-INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-28:12
-INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-28:12
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-30:12
+INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-30:12
+INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-30:12
+INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:2:1-30:12
 MERGED from [androidx.camera:camera-video:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/de7fcb81c9f21513cf4f8583e31dacd0/transformed/camera-video-1.4.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.camera:camera-view:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/b6e0e873afed873347db4c9c7b02942a/transformed/camera-view-1.4.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.camera:camera-lifecycle:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/308cf0510e4427478f29ba3a6117b40b/transformed/camera-lifecycle-1.4.1/AndroidManifest.xml:2:1-7:12
@@ -11,6 +11,7 @@ MERGED from [androidx.camera:camera-camera2:1.4.1] /Users/parthbhandakkar/.gradl
 MERGED from [androidx.camera:camera-core:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/94aba38fa065a9d9bd60f860a4d83a00/transformed/camera-core-1.4.1/AndroidManifest.xml:17:1-36:12
 MERGED from [com.google.mlkit:barcode-scanning:17.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/40374a2a16577df019330da91f685f84/transformed/barcode-scanning-17.3.0/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.mlkit:text-recognition:16.0.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/d758f4a1b7843fb7994702a0820b272d/transformed/text-recognition-16.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-location:21.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/4ae76cc795f939d835e584e9a1fb1603/transformed/play-services-location-21.3.0/AndroidManifest.xml:2:1-8:12
 MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/bb9160a5280441d25bb517821edfeb55/transformed/play-services-mlkit-barcode-scanning-18.3.1/AndroidManifest.xml:2:1-18:12
 MERGED from [com.google.mlkit:barcode-scanning-common:17.0.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/ac195ce6ff6f71030c4eaa1b93f52919/transformed/barcode-scanning-common-17.0.0/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.mlkit:text-recognition-bundled-common:17.0.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/218abe15a97627ffc6c0caf6f9926b9e/transformed/text-recognition-bundled-common-17.0.0/AndroidManifest.xml:2:1-7:12
@@ -132,13 +133,23 @@ uses-permission#android.permission.POST_NOTIFICATIONS
 ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:6:5-77
 	android:name
 		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:6:22-74
+uses-permission#android.permission.ACCESS_FINE_LOCATION
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:7:5-79
+	android:name
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:7:22-76
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:8:5-81
+	android:name
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:8:22-78
 application
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:8:5-27:19
-INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:8:5-27:19
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:10:5-29:19
+INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:10:5-29:19
 MERGED from [androidx.camera:camera-camera2:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/3b1baafda42dacf13508743c131096d0/transformed/camera-camera2-1.4.1/AndroidManifest.xml:23:5-34:19
 MERGED from [androidx.camera:camera-camera2:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/3b1baafda42dacf13508743c131096d0/transformed/camera-camera2-1.4.1/AndroidManifest.xml:23:5-34:19
 MERGED from [androidx.camera:camera-core:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/94aba38fa065a9d9bd60f860a4d83a00/transformed/camera-core-1.4.1/AndroidManifest.xml:23:5-34:19
 MERGED from [androidx.camera:camera-core:1.4.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/94aba38fa065a9d9bd60f860a4d83a00/transformed/camera-core-1.4.1/AndroidManifest.xml:23:5-34:19
+MERGED from [com.google.android.gms:play-services-location:21.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/4ae76cc795f939d835e584e9a1fb1603/transformed/play-services-location-21.3.0/AndroidManifest.xml:6:5-20
+MERGED from [com.google.android.gms:play-services-location:21.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/4ae76cc795f939d835e584e9a1fb1603/transformed/play-services-location-21.3.0/AndroidManifest.xml:6:5-20
 MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/bb9160a5280441d25bb517821edfeb55/transformed/play-services-mlkit-barcode-scanning-18.3.1/AndroidManifest.xml:8:5-16:19
 MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/bb9160a5280441d25bb517821edfeb55/transformed/play-services-mlkit-barcode-scanning-18.3.1/AndroidManifest.xml:8:5-16:19
 MERGED from [com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/0f7e063b346b65de52bcb3e4879b7668/transformed/play-services-mlkit-text-recognition-common-19.1.0/AndroidManifest.xml:8:5-16:19
@@ -178,39 +189,39 @@ MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/parthbhandakkar/.
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/ede3347104e02be8e4b955b2728a8814/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:13:9-35
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:15:9-35
 	android:label
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:12:9-31
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:14:9-31
 	android:icon
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:11:9-43
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:13:9-43
 	android:allowBackup
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:10:9-36
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:12:9-36
 	android:theme
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:14:9-44
-	android:networkSecurityConfig
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:15:9-69
-	android:usesCleartextTraffic
 		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:16:9-44
+	android:networkSecurityConfig
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:17:9-69
+	android:usesCleartextTraffic
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:18:9-44
 	android:name
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:9:9-42
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:11:9-42
 activity#com.zappay.app.MainActivity
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:18:9-26:20
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:20:9-28:20
 	android:exported
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:20:13-36
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:22:13-36
 	android:theme
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:21:13-55
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:23:13-55
 	android:name
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:19:13-41
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:21:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:22:13-25:29
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:24:13-27:29
 action#android.intent.action.MAIN
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:23:17-69
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:25:17-69
 	android:name
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:23:25-66
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:25:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:24:17-77
+ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:26:17-77
 	android:name
-		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:24:27-74
+		ADDED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml:26:27-74
 uses-sdk
 INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/parthbhandakkar/Desktop/zapPay/zapPay/android/app/src/main/AndroidManifest.xml
@@ -229,6 +240,8 @@ MERGED from [com.google.mlkit:barcode-scanning:17.3.0] /Users/parthbhandakkar/.g
 MERGED from [com.google.mlkit:barcode-scanning:17.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/40374a2a16577df019330da91f685f84/transformed/barcode-scanning-17.3.0/AndroidManifest.xml:5:5-44
 MERGED from [com.google.mlkit:text-recognition:16.0.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/d758f4a1b7843fb7994702a0820b272d/transformed/text-recognition-16.0.1/AndroidManifest.xml:5:5-44
 MERGED from [com.google.mlkit:text-recognition:16.0.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/d758f4a1b7843fb7994702a0820b272d/transformed/text-recognition-16.0.1/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-location:21.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/4ae76cc795f939d835e584e9a1fb1603/transformed/play-services-location-21.3.0/AndroidManifest.xml:4:5-44
+MERGED from [com.google.android.gms:play-services-location:21.3.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/4ae76cc795f939d835e584e9a1fb1603/transformed/play-services-location-21.3.0/AndroidManifest.xml:4:5-44
 MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/bb9160a5280441d25bb517821edfeb55/transformed/play-services-mlkit-barcode-scanning-18.3.1/AndroidManifest.xml:6:5-44
 MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/bb9160a5280441d25bb517821edfeb55/transformed/play-services-mlkit-barcode-scanning-18.3.1/AndroidManifest.xml:6:5-44
 MERGED from [com.google.mlkit:barcode-scanning-common:17.0.0] /Users/parthbhandakkar/.gradle/caches/8.11.1/transforms/ac195ce6ff6f71030c4eaa1b93f52919/transformed/barcode-scanning-common-17.0.0/AndroidManifest.xml:5:5-44

@@ -10,6 +10,26 @@ import javax.inject.Singleton
 class UserRepository @Inject constructor(
     private val api: ZapPayApi,
 ) {
+    suspend fun getProfile(): Resource<UserProfileDto> {
+        return try {
+            val response = api.getProfile()
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load profile")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun updateProfile(body: Map<String, String>): Resource<UserProfileDto> {
+        return try {
+            val response = api.updateProfile(body)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to update profile")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
     suspend fun getVehicles(): Resource<List<VehicleDto>> {
         return try {
             val response = api.getMyVehicles()

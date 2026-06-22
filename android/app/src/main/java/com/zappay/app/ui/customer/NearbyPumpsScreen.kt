@@ -1,7 +1,9 @@
 package com.zappay.app.ui.customer
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,17 +20,56 @@ import androidx.compose.ui.unit.sp
 import com.zappay.app.data.remote.dto.NearbyPumpDto
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
+import com.zappay.app.util.LocationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NearbyPumpsScreen(
     viewModel: NearbyPumpsViewModel,
+    locationHelper: LocationHelper,
     onBack: () -> Unit,
     onPumpClick: (NearbyPumpDto) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    var locationLoaded by remember { mutableStateOf(false) }
+    var locationPermissionRequested by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        locationPermissionRequested = true
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            locationHelper.getLastKnownLocation { loc ->
+                if (loc != null) {
+                    viewModel.loadNearbyPumps(loc.latitude, loc.longitude, 50.0)
+                }
+                locationLoaded = true
+            }
+        } else {
+            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+            locationLoaded = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (locationHelper.hasLocationPermission()) {
+            locationHelper.getLastKnownLocation { loc ->
+                if (loc != null) {
+                    viewModel.loadNearbyPumps(loc.latitude, loc.longitude, 50.0)
+                } else {
+                    viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                }
+                locationLoaded = true
+            }
+        } else if (!locationPermissionRequested) {
+            locationPermissionLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+        } else {
+            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+            locationLoaded = true
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -44,7 +85,15 @@ fun NearbyPumpsScreen(
                 state.isLoading && state.nearbyPumps.isEmpty() -> LoadingScreen()
                 state.error != null && state.nearbyPumps.isEmpty() -> ErrorMessage(
                     message = state.error!!,
-                    onRetry = { viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0) },
+                    onRetry = {
+                        if (locationHelper.hasLocationPermission()) {
+                            locationHelper.getLastKnownLocation { loc ->
+                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 50.0)
+                            }
+                        } else {
+                            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                        }
+                    },
                 )
                 state.nearbyPumps.isEmpty() -> ErrorMessage("No nearby pumps found")
                 else -> LazyColumn(Modifier.padding(horizontal = 16.dp)) {
@@ -63,7 +112,7 @@ private fun PumpCard(
     pump: com.zappay.app.data.remote.dto.NearbyPumpDto,
     onClick: () -> Unit,
 ) {
-    ZapPayCard(modifier = Modifier.padding(vertical = 6.dp), onClick = onClick) {
+    com.zappay.app.ui.components.ZapPayCard(modifier = Modifier.padding(vertical = 6.dp), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,7 +168,7 @@ private fun PumpCard(
                 Spacer(Modifier.height(8.dp))
                 pump.fuelPrices.forEach { fp ->
                     Text(
-                        "${fp.fuelType}: ₹${"%.2f".format(fp.price)}/L",
+                        "${fp.fuelType}: ${"%.2f".format(fp.price)}/L",
                         fontSize = 13.sp,
                         color = Gray700,
                     )

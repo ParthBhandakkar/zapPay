@@ -523,7 +523,7 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
           return (T) new AuthViewModel(singletonCImpl.authRepositoryProvider.get());
 
           case 1: // com.zappay.app.ui.customer.CustomerViewModel 
-          return (T) new CustomerViewModel(singletonCImpl.walletRepositoryProvider.get(), singletonCImpl.transactionRepositoryProvider.get(), singletonCImpl.qRRepositoryProvider.get(), singletonCImpl.tokenManagerProvider.get());
+          return (T) new CustomerViewModel(singletonCImpl.walletRepositoryProvider.get(), singletonCImpl.transactionRepositoryProvider.get(), singletonCImpl.qRRepositoryProvider.get(), singletonCImpl.tokenManagerProvider.get(), singletonCImpl.userRepositoryProvider.get());
 
           case 2: // com.zappay.app.ui.customer.NearbyPumpsViewModel 
           return (T) new NearbyPumpsViewModel(singletonCImpl.pumpRepositoryProvider.get());
@@ -646,9 +646,9 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
 
     private Provider<QRRepository> qRRepositoryProvider;
 
-    private Provider<PumpRepository> pumpRepositoryProvider;
-
     private Provider<UserRepository> userRepositoryProvider;
+
+    private Provider<PumpRepository> pumpRepositoryProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -668,12 +668,12 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
       this.walletRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<WalletRepository>(singletonCImpl, 7));
       this.transactionRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<TransactionRepository>(singletonCImpl, 8));
       this.qRRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<QRRepository>(singletonCImpl, 9));
-      this.pumpRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<PumpRepository>(singletonCImpl, 10));
-      this.userRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<UserRepository>(singletonCImpl, 11));
+      this.userRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<UserRepository>(singletonCImpl, 10));
+      this.pumpRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<PumpRepository>(singletonCImpl, 11));
     }
 
     @Override
-    public void injectZapPayApplication(ZapPayApplication zapPayApplication) {
+    public void injectZapPayApplication(ZapPayApplication arg0) {
     }
 
     @Override
@@ -735,11 +735,11 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
           case 9: // com.zappay.app.data.repository.QRRepository 
           return (T) new QRRepository(singletonCImpl.provideZapPayApiProvider.get());
 
-          case 10: // com.zappay.app.data.repository.PumpRepository 
-          return (T) new PumpRepository(singletonCImpl.provideZapPayApiProvider.get());
-
-          case 11: // com.zappay.app.data.repository.UserRepository 
+          case 10: // com.zappay.app.data.repository.UserRepository 
           return (T) new UserRepository(singletonCImpl.provideZapPayApiProvider.get());
+
+          case 11: // com.zappay.app.data.repository.PumpRepository 
+          return (T) new PumpRepository(singletonCImpl.provideZapPayApiProvider.get());
 
           default: throw new AssertionError(id);
         }

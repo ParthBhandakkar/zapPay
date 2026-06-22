@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zappay.app.data.local.TokenManager
 import com.zappay.app.data.remote.dto.TransactionDto
+import com.zappay.app.data.remote.dto.VehicleDto
 import com.zappay.app.data.repository.QRRepository
 import com.zappay.app.data.repository.TransactionRepository
+import com.zappay.app.data.repository.UserRepository
 import com.zappay.app.data.repository.WalletRepository
 import com.zappay.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,12 @@ data class CustomerUiState(
     val rechargeSuccess: Boolean = false,
     val vehicleNumber: String = "",
     val vehicleType: String = "",
+    val vehicles: List<com.zappay.app.data.remote.dto.VehicleDto> = emptyList(),
+    val qrCodesByVehicle: Map<Int, String> = emptyMap(),
+    val selectedVehicleIndex: Int = 0,
+    val profile: com.zappay.app.data.remote.dto.UserProfileDto? = null,
+    val profileSaving: Boolean = false,
+    val profileSaved: Boolean = false,
 )
 
 @HiltViewModel
@@ -35,6 +43,7 @@ class CustomerViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val qrRepository: QRRepository,
     private val tokenManager: TokenManager,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CustomerUiState())
@@ -101,21 +110,80 @@ class CustomerViewModel @Inject constructor(
         }
     }
 
-    fun generateQR() {
+    fun generateQR(vehicleId: Int? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = qrRepository.generateQR()) {
+            when (val result = qrRepository.generateQR(vehicleId = vehicleId)) {
                 is Resource.Success -> {
+                    val newMap = _uiState.value.qrCodesByVehicle.toMutableMap()
+                    if (vehicleId != null) newMap[vehicleId] = result.data.qrCode
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         qrData = result.data.qrCode,
                         qrExpiresAt = result.data.expiresAt,
+                        qrCodesByVehicle = newMap,
                     )
                 }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
                 else -> {}
             }
         }
+    }
+
+    fun loadVehicles() {
+        viewModelScope.launch {
+            when (val result = userRepository.getVehicles()) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(vehicles = result.data)
+                    result.data.forEachIndexed { index, v ->
+                        qrRepository.generateQR(vehicleId = v.id).let { qrResult ->
+                            if (qrResult is Resource.Success) {
+                                val newMap = _uiState.value.qrCodesByVehicle.toMutableMap()
+                                newMap[v.id] = qrResult.data.qrCode
+                                _uiState.value = _uiState.value.copy(qrCodesByVehicle = newMap)
+                            }
+                        }
+                    }
+                }
+                is Resource.Error -> {}
+                else -> {}
+            }
+        }
+    }
+
+    fun selectVehicleIndex(index: Int) {
+        _uiState.value = _uiState.value.copy(selectedVehicleIndex = index)
+    }
+
+    fun loadProfile() {
+        viewModelScope.launch {
+            when (val result = userRepository.getProfile()) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(profile = result.data)
+                else -> {}
+            }
+        }
+    }
+
+    fun saveProfile(body: Map<String, String>) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(profileSaving = true, profileSaved = false)
+            when (val result = userRepository.updateProfile(body)) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    profile = result.data,
+                    profileSaving = false,
+                    profileSaved = true,
+                )
+                is Resource.Error -> _uiState.value = _uiState.value.copy(
+                    profileSaving = false,
+                    error = result.message,
+                )
+                else -> {}
+            }
+        }
+    }
+
+    fun clearProfileSaved() {
+        _uiState.value = _uiState.value.copy(profileSaved = false)
     }
 
     fun clearRechargeSuccess() {

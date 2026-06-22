@@ -84,6 +84,9 @@ dependencies {
     // Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // QR Code generation
     implementation("com.google.zxing:core:3.5.3")
 

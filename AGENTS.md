@@ -32,6 +32,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
 ## Key Commands
 - Build APK: `./gradlew assembleDebug`
-- Install: `adb install -r app-debug.apk`
-- Logcat: `adb logcat -s ZapPay`
+- Install: `/opt/homebrew/share/android-commandlinetools/platform-tools/adb install -r app-debug.apk`
+- Logcat: `/opt/homebrew/share/android-commandlinetools/platform-tools/adb logcat -s ZapPay`
+- Devices: `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices`
 - Python (backend) syntax check: `python3 -m py_compile <file>`
