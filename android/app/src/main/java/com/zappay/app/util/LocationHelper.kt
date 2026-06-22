@@ -39,20 +39,6 @@ class LocationHelper @Inject constructor(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 cancellationTokenSource.token,
             ).addOnSuccessListener { location ->
-                if (location != null) {
-                    onResult(LocationResult(location.latitude, location.longitude))
-                } else {
-                    fallbackToLastKnown(onResult)
-                }
-            }.addOnFailureListener { fallbackToLastKnown(onResult) }
-        } catch (_: Exception) {
-            onResult(null)
-        }
-    }
-
-    private fun fallbackToLastKnown(onResult: (LocationResult?) -> Unit) {
-        try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 onResult(if (location != null) LocationResult(location.latitude, location.longitude) else null)
             }.addOnFailureListener { onResult(null) }
         } catch (_: Exception) {

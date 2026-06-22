@@ -78,6 +78,9 @@ interface ZapPayApi {
     @GET("pumps/my-pump")
     suspend fun getMyPump(): Response<PumpResponse>
 
+    @PUT("pumps/{pump_id}")
+    suspend fun updatePump(@Path("pump_id") pumpId: Int, @Body body: Map<String, String>): Response<PumpResponse>
+
     @POST("pumps/register")
     suspend fun registerPump(@Body request: PumpRegisterRequest): Response<GenericResponse>
 

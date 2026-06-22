@@ -1,6 +1,8 @@
 package com.zappay.app.ui.customer
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,7 +49,7 @@ fun NearbyPumpsScreen(
                 locationLoaded = true
             }
         } else {
-            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
             locationLoaded = true
         }
     }
@@ -57,7 +60,7 @@ fun NearbyPumpsScreen(
                 if (loc != null) {
                     viewModel.loadNearbyPumps(loc.latitude, loc.longitude, 50.0)
                 } else {
-                    viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                    viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
                 }
                 locationLoaded = true
             }
@@ -66,7 +69,7 @@ fun NearbyPumpsScreen(
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
             )
         } else {
-            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
             locationLoaded = true
         }
     }
@@ -88,10 +91,10 @@ fun NearbyPumpsScreen(
                     onRetry = {
                         if (locationHelper.hasLocationPermission()) {
                             locationHelper.getFreshLocation { loc ->
-                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 50.0)
+                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 2000.0)
                             }
                         } else {
-                            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
                         }
                     },
                 )
@@ -100,10 +103,10 @@ fun NearbyPumpsScreen(
                     onRetry = {
                         if (locationHelper.hasLocationPermission()) {
                             locationHelper.getFreshLocation { loc ->
-                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 50.0)
+                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 2000.0)
                             }
                         } else {
-                            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
                         }
                     },
                 )
@@ -123,6 +126,8 @@ private fun PumpCard(
     pump: com.zappay.app.data.remote.dto.NearbyPumpDto,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     com.zappay.app.ui.components.ZapPayCard(modifier = Modifier.padding(vertical = 6.dp), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -167,11 +172,27 @@ private fun PumpCard(
 
             Spacer(Modifier.height(2.dp))
 
-            Text(
-                "${"%.1f".format(pump.distanceKm)} km away",
-                fontSize = 13.sp,
-                color = Purple500,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "${"%.1f".format(pump.distanceKm)} km away",
+                    fontSize = 13.sp,
+                    color = Purple500,
+                )
+
+                TextButton(onClick = {
+                    val gmmUri = Uri.parse("google.navigation:q=${pump.latitude},${pump.longitude}")
+                    val intent = Intent(Intent.ACTION_VIEW, gmmUri).apply {
+                        setPackage("com.google.android.apps.maps")
+                    }
+                    runCatching { context.startActivity(intent) }
+                }) {
+                    Text("Directions", fontSize = 13.sp, color = Purple500)
+                }
+            }
 
             if (!pump.fuelPrices.isNullOrEmpty()) {
                 Spacer(Modifier.height(8.dp))

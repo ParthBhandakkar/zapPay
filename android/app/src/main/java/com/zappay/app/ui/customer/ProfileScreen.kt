@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zappay.app.data.remote.dto.UserProfileDto
+import com.zappay.app.data.remote.dto.VehicleDto
 import com.zappay.app.ui.components.ZapPayButton
 import com.zappay.app.ui.components.ZapPayInput
 import com.zappay.app.ui.theme.*
@@ -28,6 +29,7 @@ fun ProfileScreen(
     viewModel: CustomerViewModel? = null,
     profileData: UserProfileDto? = null,
     onSaveProfile: ((Map<String, String>) -> Unit)? = null,
+    vehicles: List<VehicleDto> = emptyList(),
 ) {
     val state by viewModel?.uiState?.collectAsState() ?: remember { mutableStateOf(null) }
     var isEditing by remember { mutableStateOf(false) }
@@ -43,7 +45,10 @@ fun ProfileScreen(
 
     val isCustomer = viewModel != null
 
-    LaunchedEffect(Unit) { viewModel?.loadVehicleInfo() }
+    LaunchedEffect(Unit) {
+        viewModel?.loadVehicleInfo()
+        viewModel?.loadVehicles()
+    }
 
     Scaffold(
         topBar = {
@@ -179,34 +184,31 @@ fun ProfileScreen(
                 Spacer(Modifier.height(24.dp))
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
-                        Text("Vehicle Details", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Gray900)
-                        Spacer(Modifier.height(16.dp))
-                        val vehicleNumber = state?.vehicleNumber ?: profileData?.vehicleNumber ?: ""
-                        val vehicleType = state?.vehicleType ?: profileData?.vehicleType ?: ""
-                        ZapPayInput(
-                            value = vehicleNumber,
-                            onValueChange = { viewModel?.saveVehicleInfo(it, vehicleType) },
-                            label = "Vehicle Number",
-                            placeholder = "MH01AB1234",
-                        )
+                        Text("My Vehicles", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Gray900)
                         Spacer(Modifier.height(12.dp))
-                        Text("Vehicle Type", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Gray700)
-                        Spacer(Modifier.height(4.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("Bike", "Scooty", "Car", "Auto").forEach { vt ->
-                                FilterChip(
-                                    selected = vehicleType == vt,
-                                    onClick = { viewModel?.saveVehicleInfo(vehicleNumber, vt) },
-                                    label = { Text(vt, fontSize = 13.sp) },
-                                )
+                        if (vehicles.isEmpty()) {
+                            Text("No vehicles added", fontSize = 14.sp, color = Gray500)
+                        } else {
+                            vehicles.forEach { v ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(v.vehicleNumber, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Gray900)
+                                        Row {
+                                            v.vehicleType?.let {
+                                                Text(it, fontSize = 12.sp, color = Gray500)
+                                            }
+                                            if (v.isPrimary) {
+                                                Text("  ·  Primary", fontSize = 12.sp, color = Purple500, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                    }
+                                }
+                                if (v != vehicles.last()) HorizontalDivider(color = Gray100)
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
-                        ZapPayButton(
-                            text = "Save Vehicle",
-                            onClick = { viewModel?.saveVehicleInfo(vehicleNumber, vehicleType) },
-                            enabled = vehicleNumber.length >= 4 && vehicleType.isNotEmpty(),
-                        )
                     }
                 }
             }

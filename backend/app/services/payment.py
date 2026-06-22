@@ -277,6 +277,16 @@ def _process_payment(db: Session, user: User, pump_id: int, fuel_type: str, fuel
             pump.pump_name, fuel_type, fuel_quantity,
         ))
 
+        from app.models import NotificationEvent
+        notif = NotificationEvent(
+            user_id=user.id,
+            notification_type="payment_success",
+            title="Payment Successful",
+            body=f"₹{total_amount} paid to {pump.pump_name} for {fuel_quantity}L {fuel_type}",
+        )
+        db.add(notif)
+        db.commit()
+
         logger.info("Fuel purchase completed: txn=%s user=%s pump=%s amount=%.2f", transaction.transaction_id, user.id, pump_id, total_amount)
         result = {
             "success": True,

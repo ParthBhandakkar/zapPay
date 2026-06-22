@@ -163,6 +163,33 @@ class PumpRepository @Inject constructor(
         }
     }
 
+    suspend fun updatePump(
+        pumpId: Int,
+        pumpName: String,
+        address: String,
+        city: String,
+        state: String,
+        pincode: String,
+        phoneNumber: String,
+        email: String,
+    ): Resource<PumpResponse> {
+        return try {
+            val response = api.updatePump(pumpId, mapOf(
+                "pump_name" to pumpName,
+                "address" to address,
+                "city" to city,
+                "state" to state,
+                "pincode" to pincode,
+                "phone_number" to phoneNumber,
+                "email" to email,
+            ))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to update pump")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
     suspend fun saveSettings(pumpId: Int, fuelTypes: String, fuelRates: String, isOpen: Boolean): Resource<PumpSettingsResponse> {
         return try {
             val response = api.savePumpSettings(SaveSettingsRequest(pumpId, fuelTypes, fuelRates, isOpen))

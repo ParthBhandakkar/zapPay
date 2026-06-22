@@ -673,7 +673,7 @@ public final class DaggerZapPayApplication_HiltComponents_SingletonC {
     }
 
     @Override
-    public void injectZapPayApplication(ZapPayApplication arg0) {
+    public void injectZapPayApplication(ZapPayApplication zapPayApplication) {
     }
 
     @Override

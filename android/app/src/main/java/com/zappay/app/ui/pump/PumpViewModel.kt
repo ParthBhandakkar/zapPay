@@ -47,6 +47,9 @@ data class PumpUiState(
 
     // Pump registration
     val registrationSuccess: Boolean = false,
+
+    // My pump details
+    val myPump: PumpResponse? = null,
 )
 
 @HiltViewModel
@@ -263,6 +266,45 @@ class PumpViewModel @Inject constructor(
 
     fun clearLookedUpVehicle() {
         _uiState.value = _uiState.value.copy(lookedUpVehicle = null)
+    }
+
+    fun loadMyPump() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.getMyPump()) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    myPump = result.data,
+                    pumpId = result.data.id,
+                )
+                is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+                else -> {}
+            }
+        }
+    }
+
+    fun updatePump(
+        pumpId: Int,
+        pumpName: String,
+        address: String,
+        city: String,
+        state: String,
+        pincode: String,
+        phoneNumber: String,
+        email: String,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.updatePump(
+                pumpId, pumpName, address, city, state, pincode, phoneNumber, email
+            )) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false, myPump = result.data)
+                }
+                is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+                else -> {}
+            }
+        }
     }
 
     fun clearError() {

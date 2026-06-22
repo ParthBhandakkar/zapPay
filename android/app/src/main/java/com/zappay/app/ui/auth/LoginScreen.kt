@@ -31,6 +31,8 @@ fun LoginScreen(
     var otp by remember { mutableStateOf("") }
     var isRegistering by remember { mutableStateOf(false) }
     var useOTP by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordMismatch by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isLoggedIn, state.userRole) {
         if (state.isLoggedIn) onLoginSuccess(state.userRole ?: role)
@@ -153,11 +155,27 @@ fun LoginScreen(
             } else {
                 ZapPayInput(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        passwordMismatch = confirmPassword.isNotEmpty() && it != confirmPassword
+                    },
                     label = "Password",
                     placeholder = "Create a password",
                     isPassword = true,
+                    imeAction = ImeAction.Next,
+                )
+                Spacer(Modifier.height(16.dp))
+                ZapPayInput(
+                    value = confirmPassword,
+                    onValueChange = {
+                        confirmPassword = it
+                        passwordMismatch = password != it
+                    },
+                    label = "Confirm Password",
+                    placeholder = "Re-enter password",
+                    isPassword = true,
                     imeAction = ImeAction.Done,
+                    error = if (passwordMismatch) "Passwords do not match" else null,
                 )
                 Spacer(Modifier.height(24.dp))
 
@@ -165,7 +183,8 @@ fun LoginScreen(
                     text = "Register",
                     onClick = { viewModel.register(phone, name, password, role) },
                     isLoading = state.isLoading,
-                    enabled = phone.length >= 10 && name.isNotEmpty() && password.length >= 6,
+                    enabled = phone.length >= 10 && name.isNotEmpty()
+                        && password.length >= 6 && !passwordMismatch && confirmPassword.isNotEmpty(),
                 )
             }
         }

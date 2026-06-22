@@ -144,7 +144,7 @@ fun ZapPayNavGraph(
 
         composable(Routes.CUSTOMER_PROFILE) {
             val vm: CustomerViewModel = hiltViewModel()
-            LaunchedEffect(Unit) { vm.loadProfile() }
+            LaunchedEffect(Unit) { vm.loadProfile(); vm.loadVehicles() }
             val state = vm.uiState.collectAsState().value
             ProfileScreen(
                 userName = state.profile?.fullName,
@@ -159,6 +159,7 @@ fun ZapPayNavGraph(
                 viewModel = vm,
                 profileData = state.profile,
                 onSaveProfile = { body -> vm.saveProfile(body) },
+                vehicles = state.vehicles,
             )
         }
 
@@ -253,16 +254,16 @@ fun ZapPayNavGraph(
 
         // ── Pump Profile ──
         composable(Routes.PUMP_PROFILE) {
-            ProfileScreen(
-                userName = null,
-                userPhone = null,
+            val vm: PumpViewModel = hiltViewModel()
+            PumpProfileScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Routes.WELCOME) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() },
             )
         }
 
