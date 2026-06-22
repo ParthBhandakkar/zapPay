@@ -6,15 +6,21 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -128,82 +134,86 @@ private fun PumpCard(
 ) {
     val context = LocalContext.current
 
-    com.zappay.app.ui.components.ZapPayCard(modifier = Modifier.padding(vertical = 6.dp), onClick = onClick) {
-        Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+    Card(
+        modifier = Modifier.padding(vertical = 6.dp).fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    ) {
+        Row(Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Purple50),
+                contentAlignment = Alignment.Center,
             ) {
+                Icon(Icons.Outlined.LocalGasStation, contentDescription = null, tint = Purple500, modifier = Modifier.size(28.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        pump.pumpName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (pump.isOpen != null) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (pump.isOpen) "Open" else "Closed",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (pump.isOpen) Green500 else Red500,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (pump.isOpen) Green500.copy(alpha = 0.12f)
+                                    else Red500.copy(alpha = 0.12f)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    pump.pumpName,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    pump.address,
+                    fontSize = 13.sp,
+                    color = Gray500,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (pump.isOpen != null) {
-                    Text(
-                        if (pump.isOpen) "Open" else "Closed",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (pump.isOpen) Green500 else Red500,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (pump.isOpen) Green500.copy(alpha = 0.12f)
-                                else Red500.copy(alpha = 0.12f)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                pump.address,
-                fontSize = 13.sp,
-                color = Gray500,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(Modifier.height(2.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "${"%.1f".format(pump.distanceKm)} km away",
-                    fontSize = 13.sp,
-                    color = Purple500,
                 )
 
-                TextButton(onClick = {
-                    val gmmUri = Uri.parse("google.navigation:q=${pump.latitude},${pump.longitude}")
-                    val intent = Intent(Intent.ACTION_VIEW, gmmUri).apply {
-                        setPackage("com.google.android.apps.maps")
-                    }
-                    runCatching { context.startActivity(intent) }
-                }) {
-                    Text("Directions", fontSize = 13.sp, color = Purple500)
-                }
-            }
-
-            if (!pump.fuelPrices.isNullOrEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(color = Gray100)
-                Spacer(Modifier.height(8.dp))
-                pump.fuelPrices.forEach { fp ->
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${fp.fuelType}: ${"%.2f".format(fp.price)}/L",
+                        "${"%.1f".format(pump.distanceKm)} km",
                         fontSize = 13.sp,
-                        color = Gray700,
+                        color = Purple500,
+                        fontWeight = FontWeight.Medium,
                     )
+                    Spacer(Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = {
+                            val gmmUri = Uri.parse("google.navigation:q=${pump.latitude},${pump.longitude}")
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, gmmUri).apply {
+                                    setPackage("com.google.android.apps.maps")
+                                })
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Purple500),
+                    ) {
+                        Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Directions", fontSize = 12.sp)
+                    }
                 }
             }
         }
