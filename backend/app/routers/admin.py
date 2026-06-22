@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from app.config import settings
 from app.database import get_db
 from app.schemas import (
     UserProfile, PetrolPumpResponse, BaseResponse, AdminDashboard,
@@ -883,23 +882,4 @@ async def add_fleet_driver(
     return BaseResponse(success=True, message="Fleet driver added")
 
 
-# ── Temporary: Clear Database (REMOVE AFTER USE) ──
-
-@router.post("/clear-database", response_model=BaseResponse)
-async def clear_database(
-    secret: str = Header(None, alias="X-Clear-Secret"),
-    db: Session = Depends(get_db)
-):
-    if settings.clear_db_secret and secret != settings.clear_db_secret:
-        raise HTTPException(status_code=403, detail="Invalid or missing clear secret")
-
-    from sqlalchemy import text, inspect
-    inspector = inspect(db.bind)
-    tables = inspector.get_table_names()
-    # Skip alembic_version
-    tables_to_clear = [t for t in tables if t != "alembic_version"]
-    if tables_to_clear:
-        tables_str = ", ".join(tables_to_clear)
-        db.execute(text(f"TRUNCATE TABLE {tables_str} RESTART IDENTITY CASCADE"))
-    db.commit()
-    return BaseResponse(success=True, message=f"Database cleared ({len(tables_to_clear)} tables)") 
+ 
