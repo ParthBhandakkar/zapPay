@@ -25,7 +25,7 @@ config = context.config
 
 # Overwrite the sqlalchemy.url in the config with the one from settings
 # This ensures we use the URL from .env (Postgres)
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.database_url_with_ssl)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
