@@ -28,25 +28,11 @@ class LocationHelper @Inject constructor(
         return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun getLastKnownLocation(onResult: (LocationResult?) -> Unit) {
+    fun getFreshLocation(onResult: (LocationResult?) -> Unit) {
         if (!hasLocationPermission()) {
             onResult(null)
             return
         }
-        try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    onResult(LocationResult(location.latitude, location.longitude))
-                } else {
-                    requestCurrentLocation(onResult)
-                }
-            }.addOnFailureListener { onResult(null) }
-        } catch (_: Exception) {
-            onResult(null)
-        }
-    }
-
-    private fun requestCurrentLocation(onResult: (LocationResult?) -> Unit) {
         try {
             val cancellationTokenSource = CancellationTokenSource()
             fusedLocationClient.getCurrentLocation(
@@ -56,8 +42,18 @@ class LocationHelper @Inject constructor(
                 if (location != null) {
                     onResult(LocationResult(location.latitude, location.longitude))
                 } else {
-                    onResult(null)
+                    fallbackToLastKnown(onResult)
                 }
+            }.addOnFailureListener { fallbackToLastKnown(onResult) }
+        } catch (_: Exception) {
+            onResult(null)
+        }
+    }
+
+    private fun fallbackToLastKnown(onResult: (LocationResult?) -> Unit) {
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                onResult(if (location != null) LocationResult(location.latitude, location.longitude) else null)
             }.addOnFailureListener { onResult(null) }
         } catch (_: Exception) {
             onResult(null)

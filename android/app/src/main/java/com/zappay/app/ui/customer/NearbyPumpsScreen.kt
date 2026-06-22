@@ -39,7 +39,7 @@ fun NearbyPumpsScreen(
     ) { permissions ->
         locationPermissionRequested = true
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            locationHelper.getLastKnownLocation { loc ->
+            locationHelper.getFreshLocation { loc ->
                 if (loc != null) {
                     viewModel.loadNearbyPumps(loc.latitude, loc.longitude, 50.0)
                 }
@@ -53,7 +53,7 @@ fun NearbyPumpsScreen(
 
     LaunchedEffect(Unit) {
         if (locationHelper.hasLocationPermission()) {
-            locationHelper.getLastKnownLocation { loc ->
+            locationHelper.getFreshLocation { loc ->
                 if (loc != null) {
                     viewModel.loadNearbyPumps(loc.latitude, loc.longitude, 50.0)
                 } else {
@@ -87,7 +87,7 @@ fun NearbyPumpsScreen(
                     message = state.error!!,
                     onRetry = {
                         if (locationHelper.hasLocationPermission()) {
-                            locationHelper.getLastKnownLocation { loc ->
+                            locationHelper.getFreshLocation { loc ->
                                 viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 50.0)
                             }
                         } else {
@@ -95,7 +95,18 @@ fun NearbyPumpsScreen(
                         }
                     },
                 )
-                state.nearbyPumps.isEmpty() -> ErrorMessage("No nearby pumps found")
+                state.nearbyPumps.isEmpty() -> ErrorMessage(
+                    message = "No nearby pumps found",
+                    onRetry = {
+                        if (locationHelper.hasLocationPermission()) {
+                            locationHelper.getFreshLocation { loc ->
+                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 50.0)
+                            }
+                        } else {
+                            viewModel.loadNearbyPumps(19.0760, 72.8777, 50.0)
+                        }
+                    },
+                )
                 else -> LazyColumn(Modifier.padding(horizontal = 16.dp)) {
                     items(state.nearbyPumps) { pump ->
                         PumpCard(pump = pump, onClick = { onPumpClick(pump) })

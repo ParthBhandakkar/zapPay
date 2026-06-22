@@ -49,7 +49,7 @@ fun SetupPumpScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            locationHelper.getLastKnownLocation { loc ->
+            locationHelper.getFreshLocation { loc ->
                 loc?.let {
                     latitude = "%.6f".format(it.latitude)
                     longitude = "%.6f".format(it.longitude)
@@ -114,7 +114,7 @@ fun SetupPumpScreen(
                 onClick = {
                     locationLoading = true
                     if (locationHelper.hasLocationPermission()) {
-                        locationHelper.getLastKnownLocation { loc ->
+                        locationHelper.getFreshLocation { loc ->
                             loc?.let {
                                 latitude = "%.6f".format(it.latitude)
                                 longitude = "%.6f".format(it.longitude)

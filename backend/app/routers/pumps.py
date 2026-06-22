@@ -160,7 +160,6 @@ async def get_nearby_pumps(
     
     pumps = db.query(PetrolPump).filter(
         PetrolPump.is_active == True,
-        PetrolPump.is_verified == True,
         PetrolPump.latitude.isnot(None),
         PetrolPump.longitude.isnot(None)
     ).all()
@@ -176,6 +175,31 @@ async def get_nearby_pumps(
         distance = ((lat_diff ** 2 + lon_diff ** 2) ** 0.5) * 111
         
         if distance <= radius_km:
+            # Parse fuel_types from JSON string
+            try:
+                fuel_types_list = json.loads(pump.fuel_types) if pump.fuel_types else []
+            except (json.JSONDecodeError, TypeError):
+                fuel_types_list = pump.fuel_types.split(",") if pump.fuel_types else []
+            
+            # Get fuel prices for this pump
+            from app.models import PumpFuelPrice
+            prices = db.query(PumpFuelPrice).filter(
+                PumpFuelPrice.pump_id == pump.id,
+                PumpFuelPrice.is_active == True
+            ).all()
+            fuel_prices = [
+                {
+                    "id": p.id,
+                    "pump_id": p.pump_id,
+                    "fuel_type": p.fuel_type,
+                    "price": p.price,
+                    "effective_from": p.effective_from.isoformat() if p.effective_from else None,
+                    "effective_to": p.effective_to.isoformat() if p.effective_to else None,
+                    "is_active": p.is_active
+                }
+                for p in prices
+            ]
+            
             pump_data = {
                 "id": pump.id,
                 "pump_name": pump.pump_name,
@@ -184,7 +208,9 @@ async def get_nearby_pumps(
                 "latitude": pump.latitude,
                 "longitude": pump.longitude,
                 "distance_km": round(distance, 2),
-                "fuel_types": pump.fuel_types.split(",") if pump.fuel_types else []
+                "fuel_types": fuel_types_list,
+                "fuel_prices": fuel_prices,
+                "is_open": pump.is_open
             }
             nearby_pumps.append(pump_data)
     
