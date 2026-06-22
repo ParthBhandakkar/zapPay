@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db, get_redis
 from app.exceptions import NotFoundException, UnauthorizedException
-from app.models import User, UserRole, PetrolPump
+from app.models import User, UserRole, PetrolPump, UserVehicle
 from app.schemas import BaseResponse, FuelPurchaseRequest
 from app.services.auth import verify_token
 from app.services.payment import process_fuel_purchase, process_fuel_purchase_by_user
@@ -132,6 +132,7 @@ async def lookup_vehicle(
     normalized = vehicle_number.upper().replace(" ", "").replace("-", "")
     logger.info("Looking up vehicle: %s -> %s", vehicle_number, normalized)
 
+    # Search in User.vehicle_number (primary vehicle)
     users = db.query(User).filter(
         User.vehicle_number.isnot(None),
         User.is_active == True,
@@ -144,6 +145,18 @@ async def lookup_vehicle(
             if un == normalized:
                 matched = u
                 break
+
+    # If not found, search in UserVehicle table (additional vehicles)
+    if not matched:
+        user_vehicle = db.query(UserVehicle).filter(
+            UserVehicle.is_active == True,
+        ).all()
+        for uv in user_vehicle:
+            if uv.vehicle_number:
+                uv_norm = uv.vehicle_number.upper().replace(" ", "").replace("-", "")
+                if uv_norm == normalized:
+                    matched = db.query(User).filter(User.id == uv.user_id, User.is_active == True).first()
+                    break
 
     if not matched:
         return {"found": False, "message": "No user found with this vehicle number"}
