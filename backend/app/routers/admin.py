@@ -885,18 +885,6 @@ async def add_fleet_driver(
 
 # ── Temporary: Clear Database (REMOVE AFTER USE) ──
 
-CLEAR_DB_TABLES = [
-    "notification_events", "audit_events", "disputes", "support_tickets",
-    "fraud_rule_hits", "fraud_rules", "blacklist_entries",
-    "fleet_drivers", "fleet_vehicles", "fleet_accounts",
-    "refund_requests", "transactions", "settlements",
-    "wallet_transactions", "settlement_details",
-    "qr_codes", "favorite_pumps", "user_vehicles",
-    "pump_operations_log", "pump_fuel_prices", "pump_inventory",
-    "pump_payment_credentials", "petrol_pumps",
-    "users",
-]
-
 @router.post("/clear-database", response_model=BaseResponse)
 async def clear_database(
     secret: str = Header(None, alias="X-Clear-Secret"),
@@ -905,8 +893,13 @@ async def clear_database(
     if settings.clear_db_secret and secret != settings.clear_db_secret:
         raise HTTPException(status_code=403, detail="Invalid or missing clear secret")
 
-    from sqlalchemy import text
-    for table in CLEAR_DB_TABLES:
-        db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+    from sqlalchemy import text, inspect
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    # Skip alembic_version
+    tables_to_clear = [t for t in tables if t != "alembic_version"]
+    if tables_to_clear:
+        tables_str = ", ".join(tables_to_clear)
+        db.execute(text(f"TRUNCATE TABLE {tables_str} RESTART IDENTITY CASCADE"))
     db.commit()
-    return BaseResponse(success=True, message="Database cleared successfully") 
+    return BaseResponse(success=True, message=f"Database cleared ({len(tables_to_clear)} tables)") 
