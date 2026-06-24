@@ -81,13 +81,7 @@ fun NearbyPumpsScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nearby Pumps", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Nearby Pumps", onBack = onBack) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
@@ -104,9 +98,12 @@ fun NearbyPumpsScreen(
                         }
                     },
                 )
-                state.nearbyPumps.isEmpty() -> ErrorMessage(
-                    message = "No nearby pumps found",
-                    onRetry = {
+                state.nearbyPumps.isEmpty() -> ZapPayEmptyState(
+                    icon = Icons.Outlined.LocalGasStation,
+                    title = "No nearby pumps found",
+                    subtitle = "We couldn't find any partner pumps in your area. Try increasing your search radius or come back later.",
+                    actionText = "Refresh Search",
+                    onAction = {
                         if (locationHelper.hasLocationPermission()) {
                             locationHelper.getFreshLocation { loc ->
                                 viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 2000.0)
@@ -114,13 +111,17 @@ fun NearbyPumpsScreen(
                         } else {
                             viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
                         }
-                    },
+                    }
                 )
-                else -> LazyColumn(Modifier.padding(horizontal = 16.dp)) {
+                else -> LazyColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item { Spacer(Modifier.height(8.dp)) }
                     items(state.nearbyPumps) { pump ->
                         PumpCard(pump = pump, onClick = { onPumpClick(pump) })
-                        HorizontalDivider(color = Gray100)
                     }
+                    item { Spacer(Modifier.height(24.dp)) }
                 }
             }
         }
@@ -134,21 +135,16 @@ private fun PumpCard(
 ) {
     val context = LocalContext.current
 
-    Card(
-        modifier = Modifier.padding(vertical = 6.dp).fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-    ) {
+    ZapPayCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(Modifier.padding(16.dp)) {
             Box(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Purple50),
+                    .background(Primary50),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.LocalGasStation, contentDescription = null, tint = Purple500, modifier = Modifier.size(28.dp))
+                Icon(Icons.Outlined.LocalGasStation, contentDescription = null, tint = Primary500, modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -160,44 +156,36 @@ private fun PumpCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     if (pump.isOpen != null) {
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (pump.isOpen) "Open" else "Closed",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (pump.isOpen) Green500 else Red500,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    if (pump.isOpen) Green500.copy(alpha = 0.12f)
-                                    else Red500.copy(alpha = 0.12f)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ZapPayBadge(
+                            text = if (pump.isOpen) "Open" else "Closed",
+                            color = if (pump.isOpen) Success500 else Danger500
                         )
                     }
                 }
 
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     pump.address,
                     fontSize = 13.sp,
-                    color = Gray500,
+                    color = Neutral500,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${"%.1f".format(pump.distanceKm)} km",
+                        "${"%.1f".format(pump.distanceKm)} km away",
                         fontSize = 13.sp,
-                        color = Purple500,
+                        color = Primary500,
                         fontWeight = FontWeight.Medium,
                     )
                     Spacer(Modifier.weight(1f))
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             val gmmUri = Uri.parse("google.navigation:q=${pump.latitude},${pump.longitude}")
                             runCatching {
@@ -208,11 +196,15 @@ private fun PumpCard(
                         },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Purple500),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.height(32.dp)
                     ) {
-                        Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Directions", fontSize = 12.sp)
+                        Text("Directions", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

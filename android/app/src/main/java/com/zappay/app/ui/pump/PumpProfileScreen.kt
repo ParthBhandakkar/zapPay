@@ -17,8 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.zappay.app.ui.components.ZapPayButton
-import com.zappay.app.ui.components.ZapPayInput
+import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,17 +54,16 @@ fun PumpProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Profile", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
+            ZapPayTopBar(
+                title = "Profile",
+                onBack = onBack,
                 actions = {
                     if (state.myPump != null) {
                         TextButton(onClick = { isEditing = !isEditing }) {
-                            Text(if (isEditing) "View" else "Edit", color = Purple500)
+                            Text(if (isEditing) "Cancel" else "Edit", color = Primary500, fontWeight = FontWeight.SemiBold)
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
+                }
             )
         },
     ) { padding ->
@@ -77,58 +75,53 @@ fun PumpProfileScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
 
             Box(
-                modifier = Modifier.size(80.dp).background(Purple500, CircleShape),
+                modifier = Modifier.size(88.dp).background(Primary500, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     (state.myPump?.pumpName?.firstOrNull()?.uppercase() ?: "P"),
-                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = White,
+                    fontSize = 36.sp, fontWeight = FontWeight.Bold, color = White,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Text(state.myPump?.pumpName ?: "Pump", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Gray900)
-            Text(state.myPump?.phoneNumber ?: "", fontSize = 14.sp, color = Gray500)
+            Spacer(Modifier.height(16.dp))
+            Text(state.myPump?.pumpName ?: "Pump Station", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(state.myPump?.phoneNumber ?: "", fontSize = 14.sp, color = Neutral500)
 
-            Spacer(Modifier.height(8.dp))
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Blue100),
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Text(
-                    "Pump Owner",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    color = Blue500,
-                    fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                )
-            }
+            Spacer(Modifier.height(12.dp))
+            ZapPayBadge(text = "Pump Owner", color = Info500)
 
             Spacer(Modifier.height(32.dp))
 
             if (state.myPump == null && state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(40.dp), color = Purple500)
+                CircularProgressIndicator(modifier = Modifier.size(40.dp), color = Primary500)
             } else if (state.myPump != null && isEditing) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
-                        Text("Edit Pump Details", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Gray900)
-                        Spacer(Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(Modifier.padding(24.dp)) {
+                        Text("Edit Pump Details", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(Modifier.height(20.dp))
                         ZapPayInput(value = editPumpName, onValueChange = { editPumpName = it }, label = "Pump Name")
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
                         ZapPayInput(value = editAddress, onValueChange = { editAddress = it }, label = "Address")
-                        Spacer(Modifier.height(12.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Spacer(Modifier.height(16.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             ZapPayInput(value = editCity, onValueChange = { editCity = it }, label = "City", modifier = Modifier.weight(1f))
                             ZapPayInput(value = editState, onValueChange = { editState = it }, label = "State", modifier = Modifier.weight(1f))
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
                         ZapPayInput(value = editPincode, onValueChange = { editPincode = it }, label = "Pincode", keyboardType = KeyboardType.Number)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
                         ZapPayInput(value = editPhone, onValueChange = { editPhone = it }, label = "Phone", keyboardType = KeyboardType.Phone)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
                         ZapPayInput(value = editEmail, onValueChange = { editEmail = it }, label = "Email", keyboardType = KeyboardType.Email)
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(24.dp))
                         ZapPayButton(
                             text = "Save Changes",
                             onClick = {
@@ -144,7 +137,12 @@ fun PumpProfileScreen(
                     }
                 }
             } else if (state.myPump != null) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
                     Column(Modifier.padding(20.dp)) {
                         PumpProfileRow("Pump Name", state.myPump!!.pumpName)
                         PumpProfileDivider()
@@ -162,21 +160,30 @@ fun PumpProfileScreen(
                         PumpProfileDivider()
                         PumpProfileRow("Email", state.myPump!!.email ?: "-")
                         PumpProfileDivider()
-                        PumpProfileRow("Status", if (state.myPump!!.isOpen == true) "Open" else "Closed")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Status", color = Neutral500, fontSize = 14.sp)
+                            ZapPayBadge(
+                                text = if (state.myPump!!.isOpen == true) "Open" else "Closed",
+                                color = if (state.myPump!!.isOpen == true) Success500 else Danger500
+                            )
+                        }
                     }
                 }
             }
 
             if (state.error != null) {
                 Spacer(Modifier.height(16.dp))
-                Text(state.error!!, color = Red500, fontSize = 13.sp)
+                Card(colors = CardDefaults.cardColors(containerColor = Danger50), shape = RoundedCornerShape(12.dp)) {
+                    Text(state.error!!, color = Danger500, fontSize = 13.sp, modifier = Modifier.padding(14.dp))
+                }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
             ZapPayButton(
                 text = "Logout",
                 onClick = onLogout,
-                variant = com.zappay.app.ui.components.ButtonVariant.OUTLINE,
+                variant = ButtonVariant.OUTLINE,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -185,12 +192,12 @@ fun PumpProfileScreen(
 @Composable
 private fun PumpProfileRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = Gray500, fontSize = 14.sp)
-        Text(value, color = Gray900, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = Neutral500, fontSize = 14.sp)
+        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun PumpProfileDivider() {
-    HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Gray100)
+    HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
 }

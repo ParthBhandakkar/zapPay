@@ -3,6 +3,9 @@ package com.zappay.app.ui.customer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -26,13 +29,7 @@ fun HistoryScreen(
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Transaction History", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Transaction History", onBack = onBack) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // Filter chips
@@ -45,6 +42,10 @@ fun HistoryScreen(
                         selected = filter == key,
                         onClick = { filter = key },
                         label = { Text(label, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Primary50,
+                            selectedLabelColor = Primary700,
+                        ),
                     )
                 }
             }
@@ -52,12 +53,16 @@ fun HistoryScreen(
             Text(
                 "${state.transactions.size} transactions",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                color = Gray500,
+                color = Neutral500,
                 fontSize = 13.sp,
             )
 
             if (state.transactions.isEmpty()) {
-                ErrorMessage("No transactions found")
+                ZapPayEmptyState(
+                    icon = Icons.Outlined.ReceiptLong,
+                    title = "No transactions yet",
+                    subtitle = "Your fuel purchases and wallet recharges will appear here",
+                )
             } else {
                 val filtered = if (filter == "all") state.transactions
                 else state.transactions.filter { it.transactionType == filter }
@@ -71,7 +76,7 @@ fun HistoryScreen(
                             isCredit = tx.transactionType == "wallet_recharge",
                             onClick = { onTransactionClick(tx.transactionId) },
                         )
-                        HorizontalDivider(color = Gray100)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }

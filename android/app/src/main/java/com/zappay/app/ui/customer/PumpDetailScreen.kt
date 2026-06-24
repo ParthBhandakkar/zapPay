@@ -25,58 +25,48 @@ fun PumpDetailScreen(
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(state.pumpName, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = state.pumpName, onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
         ) {
+            Spacer(Modifier.height(16.dp))
+            
             // Status badge + distance
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    if (state.isOpen) "● Open" else "● Closed",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (state.isOpen) Green500 else Red500,
+                ZapPayBadge(
+                    text = if (state.isOpen) "Open" else "Closed",
+                    color = if (state.isOpen) Success500 else Danger500,
                 )
                 Text(
                     "${"%.1f".format(state.distanceKm)} km away",
                     fontSize = 14.sp,
-                    color = Purple500,
+                    color = Primary500,
+                    fontWeight = FontWeight.Medium,
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Address
             Text(
                 state.address,
                 fontSize = 14.sp,
-                color = Gray700,
+                color = Neutral500,
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
 
             // Fuel Prices section
-            Text(
-                "Fuel Prices",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gray900,
-            )
+            SectionHeader("Fuel Prices")
 
             Spacer(Modifier.height(12.dp))
 
@@ -89,51 +79,58 @@ fun PumpDetailScreen(
                 state.fuelPrices.isEmpty() -> Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Gray50),
+                    colors = CardDefaults.cardColors(containerColor = Neutral50),
                 ) {
                     Text(
                         "No fuel prices available",
                         modifier = Modifier.padding(24.dp),
-                        color = Gray500,
+                        color = Neutral500,
                         fontSize = 14.sp,
                     )
                 }
                 else -> {
-                    // Price header
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Gray100, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    // Price table
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Fuel Type", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        Text("Price", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    }
-
-                    Column(Modifier.fillMaxWidth()) {
-                        state.fuelPrices.forEachIndexed { index, fp ->
+                        Column {
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .background(if (index % 2 == 0) White else Gray50)
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .background(Neutral100)
+                                    .padding(horizontal = 20.dp, vertical = 14.dp),
                             ) {
-                                Text(
-                                    fp.fuelType,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Text(
-                                    "₹${"%.2f".format(fp.price)}/L",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Purple500,
-                                )
+                                Text("Fuel Type", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), color = Neutral700)
+                                Text("Price", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Neutral700)
                             }
-                            if (index < state.fuelPrices.lastIndex) {
-                                HorizontalDivider(color = Gray100)
+
+                            state.fuelPrices.forEachIndexed { index, fp ->
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        fp.fuelType,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.weight(1f),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        "₹${"%.2f".format(fp.price)}/L",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary500,
+                                    )
+                                }
+                                if (index < state.fuelPrices.lastIndex) {
+                                    HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                                }
                             }
                         }
                     }
@@ -143,36 +140,32 @@ fun PumpDetailScreen(
             Spacer(Modifier.height(32.dp))
 
             // Pump info card
-            Text(
-                "Pump Information",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gray900,
-            )
+            SectionHeader("Pump Information")
 
             Spacer(Modifier.height(12.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Purple50),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Primary50),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(Modifier.padding(16.dp)) {
+                Column(Modifier.padding(20.dp)) {
                     InfoRow("Pump ID", "#${state.pumpId}")
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     InfoRow("Name", state.pumpName)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     InfoRow("Address", state.address)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     InfoRow("Distance", "${"%.1f".format(state.distanceKm)} km")
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     InfoRow("Status", if (state.isOpen) "Open" else "Closed")
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     InfoRow("Fuel Types Available", state.fuelPrices.joinToString(", ") { it.fuelType }.ifEmpty { "N/A" })
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -180,7 +173,7 @@ fun PumpDetailScreen(
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 14.sp, color = Gray500)
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Gray900)
+        Text(label, fontSize = 14.sp, color = Neutral500)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
     }
 }

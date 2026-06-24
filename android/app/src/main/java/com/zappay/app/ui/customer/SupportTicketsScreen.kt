@@ -5,12 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.HeadsetMic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -43,18 +42,13 @@ fun SupportTicketsScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Support Tickets", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Support Tickets", onBack = onBack) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
-                containerColor = Purple500,
+                containerColor = Primary500,
                 contentColor = White,
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Create ticket")
             }
@@ -68,12 +62,22 @@ fun SupportTicketsScreen(
                     message = state.error!!,
                     onRetry = { viewModel.loadTickets() },
                 )
-                state.tickets.isEmpty() -> ErrorMessage("No support tickets")
-                else -> LazyColumn(Modifier.padding(horizontal = 16.dp)) {
+                state.tickets.isEmpty() -> ZapPayEmptyState(
+                    icon = Icons.Outlined.HeadsetMic,
+                    title = "How can we help?",
+                    subtitle = "Create a support ticket if you face any issues with payments or the app.",
+                    actionText = "Create Ticket",
+                    onAction = { showCreateDialog = true }
+                )
+                else -> LazyColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item { Spacer(Modifier.height(8.dp)) }
                     items(state.tickets) { ticket ->
                         TicketCard(ticket = ticket)
-                        HorizontalDivider(color = Gray100)
                     }
+                    item { Spacer(Modifier.height(80.dp)) } // Space for FAB
                 }
             }
         }
@@ -94,70 +98,66 @@ fun SupportTicketsScreen(
 @Composable
 private fun TicketCard(ticket: com.zappay.app.data.remote.dto.SupportTicketDto) {
     val statusColor = when (ticket.status?.lowercase()) {
-        "open" -> Yellow500
-        "resolved" -> Green500
-        "closed" -> Gray500
-        else -> Gray500
+        "open" -> Warning500
+        "resolved" -> Success500
+        "closed" -> Neutral500
+        else -> Neutral500
     }
     val priorityColor = when (ticket.priority?.lowercase()) {
-        "low" -> Green500
-        "medium" -> Yellow500
-        "high" -> Red500
-        "urgent" -> Red500
-        else -> Gray500
+        "low" -> Success500
+        "medium" -> Warning500
+        "high" -> Danger500
+        "urgent" -> Danger700
+        else -> Neutral500
     }
 
-    ZapPayCard(modifier = Modifier.padding(vertical = 6.dp)) {
+    ZapPayCard {
         Column(Modifier.padding(16.dp)) {
-            Text(
-                ticket.subject,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    ticket.subject,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (ticket.status != null) {
+                    Spacer(Modifier.width(8.dp))
+                    ZapPayBadge(text = ticket.status, color = statusColor)
+                }
+            }
+            
             if (!ticket.description.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     ticket.description,
                     fontSize = 13.sp,
-                    color = Gray500,
+                    color = Neutral500,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (ticket.category != null) {
-                    Badge(text = ticket.category, color = Purple500)
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(12.dp))
+            
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (ticket.category != null) {
+                        ZapPayBadge(text = ticket.category, color = Primary500)
+                    }
+                    if (ticket.priority != null) {
+                        ZapPayBadge(text = ticket.priority, color = priorityColor)
+                    }
                 }
-                if (ticket.priority != null) {
-                    Badge(text = ticket.priority, color = priorityColor)
+                if (ticket.createdAt != null) {
+                    Text(ticket.createdAt.formatDate(), fontSize = 12.sp, color = Neutral400)
                 }
-                if (ticket.status != null) {
-                    Badge(text = ticket.status, color = statusColor)
-                }
-            }
-            if (ticket.createdAt != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(ticket.createdAt.formatDate(), fontSize = 12.sp, color = Gray500)
             }
         }
     }
-}
-
-@Composable
-private fun Badge(text: String, color: androidx.compose.ui.graphics.Color) {
-    Text(
-        text,
-        color = color,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,77 +171,42 @@ private fun CreateTicketDialog(
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("technical") }
     var selectedPriority by remember { mutableStateOf("medium") }
-    var categoryExpanded by remember { mutableStateOf(false) }
-    var priorityExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Ticket", fontWeight = FontWeight.SemiBold) },
+        title = { Text("Create Support Ticket", fontWeight = FontWeight.SemiBold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ZapPayInput(
                     value = subject,
                     onValueChange = { subject = it },
                     label = "Subject",
-                    placeholder = "Enter subject",
+                    placeholder = "Brief description of the issue",
                     imeAction = ImeAction.Next,
                 )
+                
                 ZapPayInput(
                     value = description,
                     onValueChange = { description = it },
-                    label = "Description",
-                    placeholder = "Describe your issue",
+                    label = "Details",
+                    placeholder = "Please explain the issue in detail",
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Done,
                 )
-                // Category dropdown
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategory.replaceFirstChar { it.uppercase() },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Category") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = categoryExpanded,
-                        onDismissRequest = { categoryExpanded = false },
-                    ) {
-                        listOf("technical", "billing", "other").forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat.replaceFirstChar { it.uppercase() }) },
-                                onClick = { selectedCategory = cat; categoryExpanded = false },
-                            )
-                        }
-                    }
-                }
-                // Priority dropdown
-                ExposedDropdownMenuBox(
-                    expanded = priorityExpanded,
-                    onExpandedChange = { priorityExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = selectedPriority.replaceFirstChar { it.uppercase() },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Priority") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = priorityExpanded,
-                        onDismissRequest = { priorityExpanded = false },
-                    ) {
-                        listOf("low", "medium", "high", "urgent").forEach { pri ->
-                            DropdownMenuItem(
-                                text = { Text(pri.replaceFirstChar { it.uppercase() }) },
-                                onClick = { selectedPriority = pri; priorityExpanded = false },
+                
+                Column {
+                    Text("Category", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Neutral700)
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("technical" to "Tech", "billing" to "Billing", "other" to "Other").forEach { (cat, label) ->
+                            FilterChip(
+                                selected = selectedCategory == cat,
+                                onClick = { selectedCategory = cat },
+                                label = { Text(label, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary50,
+                                    selectedLabelColor = Primary700,
+                                )
                             )
                         }
                     }
@@ -249,19 +214,21 @@ private fun CreateTicketDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onCreate(subject, description.ifBlank { null }, selectedCategory, selectedPriority) },
                 enabled = subject.isNotBlank() && !isLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = Primary500)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = White, strokeWidth = 2.dp)
                 } else {
-                    Text("Submit", color = Purple500)
+                    Text("Submit Ticket")
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = Gray500) }
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Neutral600) }
         },
+        containerColor = MaterialTheme.colorScheme.surface,
     )
 }

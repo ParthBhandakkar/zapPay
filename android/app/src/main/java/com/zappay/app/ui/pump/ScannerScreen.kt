@@ -151,9 +151,9 @@ fun ScannerScreen(
             title = { Text("Payment Successful", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Card(colors = CardDefaults.cardColors(containerColor = Green50), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Success50), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
-                            Text(p.purchaseMessage ?: "Transaction completed", fontSize = 13.sp, color = Gray700)
+                            Text(p.purchaseMessage ?: "Transaction completed", fontSize = 13.sp, color = Success700)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -164,11 +164,11 @@ fun ScannerScreen(
                     DetailRow("Customer", p.purchaseCustomerName ?: "N/A")
                     p.purchaseCustomerPhone?.let { DetailRow("Phone", it) }
                     p.purchaseVehicleNumber?.let { DetailRow("Vehicle", it) }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     p.purchaseFuelType?.let { DetailRow("Fuel Type", it) }
                     DetailRow("Quantity", "${"%.2f".format(p.purchaseFuelQuantity ?: 0.0)} L")
                     DetailRow("Rate", "₹ ${"%.2f".format(p.purchaseFuelRate ?: 0.0)}/L")
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     DetailRow("Total Amount", "₹ $total", isBold = true)
                     Spacer(Modifier.height(4.dp))
                     DetailRow("Time", timestamp)
@@ -185,72 +185,87 @@ fun ScannerScreen(
                     viewModel.clearPurchaseSuccess()
                     viewModel.clearScannedCustomer()
                     viewModel.clearLookedUpVehicle()
-                }) { Text("OK") }
+                }, colors = ButtonDefaults.buttonColors(containerColor = Success500)) { Text("Done") }
             },
+            containerColor = MaterialTheme.colorScheme.surface,
         )
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Scan & Pay", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Scan & Pay", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
         ) {
             if (state.error != null && !showPurchase) {
-                Card(colors = CardDefaults.cardColors(containerColor = Red100), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(state.error!!, color = Red500, modifier = Modifier.padding(12.dp), fontSize = 13.sp)
+                Card(colors = CardDefaults.cardColors(containerColor = Danger100), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(state.error!!, color = Danger500, modifier = Modifier.padding(12.dp), fontSize = 13.sp)
                     TextButton(onClick = {
                         scannedQrData = null
                         cameraActive = scanMode == "qr"
                         viewModel.clearError()
                     }, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-                        Text("Dismiss", color = Purple500, fontSize = 12.sp)
+                        Text("Dismiss", color = Primary500, fontSize = 12.sp)
                     }
                 }
             }
 
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = scanMode == "qr", onClick = {
-                    scanMode = "qr"
-                    manualInput = ""
-                    cameraActive = true
-                    scannedQrData = null
-                    viewModel.clearScannedCustomer()
-                    viewModel.clearLookedUpVehicle()
-                }, label = { Text("QR Code") })
-                FilterChip(selected = scanMode == "vehicle", onClick = {
-                    scanMode = "vehicle"
-                    manualInput = ""
-                    cameraActive = false
-                    scannedQrData = null
-                    viewModel.clearScannedCustomer()
-                    viewModel.clearLookedUpVehicle()
-                }, label = { Text("Vehicle Number") })
+                FilterChip(
+                    selected = scanMode == "qr",
+                    onClick = {
+                        scanMode = "qr"
+                        manualInput = ""
+                        cameraActive = true
+                        scannedQrData = null
+                        viewModel.clearScannedCustomer()
+                        viewModel.clearLookedUpVehicle()
+                    },
+                    label = { Text("QR Scanner", fontSize = 13.sp) },
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Primary50, selectedLabelColor = Primary700),
+                )
+                FilterChip(
+                    selected = scanMode == "vehicle",
+                    onClick = {
+                        scanMode = "vehicle"
+                        manualInput = ""
+                        cameraActive = false
+                        scannedQrData = null
+                        viewModel.clearScannedCustomer()
+                        viewModel.clearLookedUpVehicle()
+                    },
+                    label = { Text("Vehicle Lookup", fontSize = 13.sp) },
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Primary50, selectedLabelColor = Primary700),
+                )
             }
 
             if (scanMode == "qr") {
                 if (cameraActive) {
                     if (hasCameraPermission) {
-                        Box(Modifier.fillMaxWidth().height(300.dp).background(Gray100)) {
-                            QRCodeScanner(modifier = Modifier.fillMaxSize()) { qrData ->
-                                if (!state.isLoading && scannedQrData == null) {
-                                    scannedQrData = qrData
-                                    viewModel.validateQR(qrData)
+                        Card(
+                            modifier = Modifier.fillMaxWidth().height(320.dp).padding(16.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Box(Modifier.fillMaxSize().background(Neutral900)) {
+                                QRCodeScanner(modifier = Modifier.fillMaxSize()) { qrData ->
+                                    if (!state.isLoading && scannedQrData == null) {
+                                        scannedQrData = qrData
+                                        viewModel.validateQR(qrData)
+                                    }
                                 }
                             }
                         }
                     } else {
-                        Card(modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp)) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Neutral100)
+                        ) {
                             Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Text("Camera permission required", color = Gray500)
+                                Text("Camera permission required", color = Neutral500)
                                 Spacer(Modifier.height(8.dp))
-                                TextButton(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) { Text("Grant Permission", color = Purple500) }
+                                ZapPayButton(text = "Grant Permission", onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }, modifier = Modifier.width(200.dp))
                             }
                         }
                     }
@@ -258,50 +273,63 @@ fun ScannerScreen(
 
                 if (scannedQrData == null) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Or enter QR data manually:", color = Gray500, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Text("Or enter QR data manually:", color = Neutral500, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
+                        ZapPayInput(
                             value = manualInput,
                             onValueChange = { manualInput = it },
+                            label = "",
+                            placeholder = "QR code data",
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("QR code data", fontSize = 13.sp) },
-                            singleLine = true,
                         )
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
-                            if (manualInput.isNotBlank()) {
-                                scannedQrData = manualInput
-                                viewModel.validateQR(manualInput)
-                            }
-                        }, enabled = manualInput.isNotEmpty() && !state.isLoading) {
-                            Text("Validate")
-                        }
+                        ZapPayButton(
+                            text = "Validate",
+                            onClick = {
+                                if (manualInput.isNotBlank()) {
+                                    scannedQrData = manualInput
+                                    viewModel.validateQR(manualInput)
+                                }
+                            },
+                            enabled = manualInput.isNotEmpty() && !state.isLoading,
+                            modifier = Modifier.width(100.dp).padding(top = 8.dp)
+                        )
                     }
                 }
             } else {
                 Spacer(Modifier.height(12.dp))
-                ZapPayInput(value = manualInput, onValueChange = { manualInput = it }, label = "Vehicle Number", placeholder = "MH01AB1234", keyboardType = KeyboardType.Ascii)
-                Spacer(Modifier.height(12.dp))
-                ZapPayButton(text = "Lookup Vehicle", onClick = {
-                    scannedQrData = null
-                    viewModel.lookupVehicle(manualInput)
-                }, enabled = manualInput.length >= 6 && !state.isLoading)
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    ZapPayInput(value = manualInput, onValueChange = { manualInput = it }, label = "Vehicle Number", placeholder = "e.g. MH01AB1234", keyboardType = KeyboardType.Ascii)
+                    Spacer(Modifier.height(12.dp))
+                    ZapPayButton(text = "Lookup Vehicle", onClick = {
+                        scannedQrData = null
+                        viewModel.lookupVehicle(manualInput)
+                    }, enabled = manualInput.length >= 6 && !state.isLoading, isLoading = state.isLoading)
+                }
             }
 
             val vehicle = state.lookedUpVehicle
-            if (vehicle?.found == true && !showPurchase) {
+            if (vehicle != null && !showPurchase) {
                 Spacer(Modifier.height(16.dp))
-                Card(modifier = Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = Blue100)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Vehicle Found", fontWeight = FontWeight.Bold, color = Blue500)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Owner: ${vehicle.userName ?: "N/A"}", fontSize = 14.sp)
-                        Text("Phone: ${vehicle.userPhone ?: "N/A"}", fontSize = 14.sp)
-                        Text("Balance: ₹ ${"%.2f".format(vehicle.walletBalance ?: 0.0)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        vehicle.vehicleNumber?.let { Text("Vehicle: $it", fontSize = 14.sp) }
-                        Spacer(Modifier.height(12.dp))
-                        ZapPayButton(text = "Create Purchase", onClick = { showPurchase = true })
+                if (vehicle.found) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = Info50)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Vehicle Found", fontWeight = FontWeight.Bold, color = Info600)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Owner: ${vehicle.userName ?: "N/A"}", fontSize = 14.sp)
+                            Text("Phone: ${vehicle.userPhone ?: "N/A"}", fontSize = 14.sp)
+                            Text("Balance: ₹ ${"%.2f".format(vehicle.walletBalance ?: 0.0)}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            vehicle.vehicleNumber?.let { Text("Vehicle: $it", fontSize = 14.sp) }
+                            Spacer(Modifier.height(12.dp))
+                            ZapPayButton(text = "Create Purchase", onClick = { showPurchase = true })
+                        }
                     }
+                } else {
+                    ZapPayEmptyState(
+                        title = "Vehicle Not Found",
+                        subtitle = "This vehicle is not registered with ZapPay",
+                        icon = com.zappay.app.ui.components.ZapPayIcons.DirectionsCar ?: androidx.compose.material.icons.Icons.Outlined.DirectionsCar
+                    )
                 }
             }
         }
@@ -324,12 +352,12 @@ fun ScannerScreen(
                 Column {
                     if (customer?.valid == true) {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Green100),
+                            colors = CardDefaults.cardColors(containerColor = Success50),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                         ) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("Customer", fontWeight = FontWeight.Bold, color = Green500, fontSize = 13.sp)
+                                Text("Customer", fontWeight = FontWeight.Bold, color = Success600, fontSize = 13.sp)
                                 Spacer(Modifier.height(4.dp))
                                 Text("Name: ${customer.userName ?: "N/A"}", fontSize = 14.sp)
                                 Text("Phone: ${customer.userPhone ?: "N/A"}", fontSize = 14.sp)
@@ -340,12 +368,12 @@ fun ScannerScreen(
                         Spacer(Modifier.height(12.dp))
                     } else if (lookupVehicle?.found == true) {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Blue100),
+                            colors = CardDefaults.cardColors(containerColor = Info50),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                         ) {
                             Column(Modifier.padding(12.dp)) {
-                                Text("Vehicle Owner", fontWeight = FontWeight.Bold, color = Blue500, fontSize = 13.sp)
+                                Text("Vehicle Owner", fontWeight = FontWeight.Bold, color = Info600, fontSize = 13.sp)
                                 Spacer(Modifier.height(4.dp))
                                 Text("Owner: ${lookupVehicle.userName ?: "N/A"}", fontSize = 14.sp)
                                 Text("Phone: ${lookupVehicle.userPhone ?: "N/A"}", fontSize = 14.sp)
@@ -356,28 +384,32 @@ fun ScannerScreen(
                         Spacer(Modifier.height(12.dp))
                     }
 
-                    Text("Fuel Type", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Gray700)
+                    Text("Fuel Type", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Neutral700)
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         fuelOptions.forEach { option ->
-                            FilterChip(selected = fuelType == option.name, onClick = { fuelType = option.name }, label = { Text(option.name, fontSize = 13.sp) })
+                            FilterChip(
+                                selected = fuelType == option.name,
+                                onClick = { fuelType = option.name },
+                                label = { Text(option.name, fontSize = 13.sp) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Primary50, selectedLabelColor = Primary700)
+                            )
                         }
                     }
                     Spacer(Modifier.height(12.dp))
 
                     if (!pumpIsOpen) {
-                        Card(colors = CardDefaults.cardColors(containerColor = Yellow100), modifier = Modifier.fillMaxWidth()) {
-                            Text("Pump is marked closed in settings.", color = Gray700, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
+                        Card(colors = CardDefaults.cardColors(containerColor = Warning50), modifier = Modifier.fillMaxWidth()) {
+                            Text("Pump is marked closed in settings.", color = Warning700, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
                         }
                         Spacer(Modifier.height(8.dp))
                     }
 
-                    OutlinedTextField(
+                    ZapPayInput(
                         value = fuelQuantity,
                         onValueChange = { fuelQuantity = it },
-                        label = { Text("Quantity (L)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
+                        label = "Quantity (L)",
+                        keyboardType = KeyboardType.Decimal,
                     )
                     Spacer(Modifier.height(8.dp))
 
@@ -388,19 +420,24 @@ fun ScannerScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !rateLockedBySettings,
-                        supportingText = if (rateLockedBySettings) {{ Text("Auto-set from pump settings", fontSize = 11.sp, color = Gray500) }} else {{ Text("No saved rate for this fuel. Enter rate manually.", fontSize = 11.sp, color = Gray500) }},
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Primary500,
+                            unfocusedBorderColor = Neutral200,
+                        ),
+                        supportingText = if (rateLockedBySettings) {{ Text("Auto-set from pump settings", fontSize = 11.sp, color = Neutral500) }} else {{ Text("No saved rate for this fuel. Enter rate manually.", fontSize = 11.sp, color = Neutral500) }},
                     )
 
                     if (fuelQuantity.toDoubleOrNull() != null && fuelRate.toDoubleOrNull() != null) {
                         Spacer(Modifier.height(8.dp))
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Purple50),
+                            colors = CardDefaults.cardColors(containerColor = Primary50),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
                                 "Total: ₹ ${"%.2f".format(fuelQuantity.toDouble() * fuelRate.toDouble())}",
                                 fontWeight = FontWeight.Bold,
-                                color = Purple500,
+                                color = Primary500,
                                 fontSize = 18.sp,
                                 modifier = Modifier.padding(12.dp),
                             )
@@ -424,6 +461,7 @@ fun ScannerScreen(
                         }
                     },
                     enabled = (fuelQuantity.toDoubleOrNull() ?: 0.0) > 0 && (fuelRate.toDoubleOrNull() ?: 0.0) > 0 && pumpIsOpen && !state.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary500)
                 ) {
                     if (state.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = White, strokeWidth = 2.dp)
@@ -439,8 +477,9 @@ fun ScannerScreen(
                     scannedQrData = null
                     viewModel.clearScannedCustomer()
                     viewModel.clearLookedUpVehicle()
-                }) { Text("Cancel") }
+                }) { Text("Cancel", color = Neutral500) }
             },
+            containerColor = MaterialTheme.colorScheme.surface,
         )
     }
 }
@@ -522,7 +561,7 @@ private fun formatRate(rate: Double): String {
 @Composable
 private fun DetailRow(label: String, value: String, isBold: Boolean = false) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = Gray500, fontSize = 13.sp)
+        Text(label, color = Neutral500, fontSize = 13.sp)
         Text(value, fontWeight = if (isBold) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
     }
 }

@@ -19,7 +19,6 @@ import com.zappay.app.data.remote.dto.PumpRegisterRequest
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
 import com.zappay.app.util.LocationHelper
-import com.zappay.app.util.LocationResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,13 +68,7 @@ fun SetupPumpScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Register Pump", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Register Pump", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -84,14 +77,19 @@ fun SetupPumpScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
-            Text("Fill in your pump details", fontSize = 14.sp, color = Gray500)
-            Spacer(Modifier.height(20.dp))
+            Text("Fill in your pump details", fontSize = 15.sp, color = Neutral500)
+            Spacer(Modifier.height(24.dp))
 
-            ZapPayInput(value = pumpName, onValueChange = { pumpName = it }, label = "Pump Name", placeholder = "City Fuel Station")
+            SectionHeader("Basic Details")
+            Spacer(Modifier.height(12.dp))
+            ZapPayInput(value = pumpName, onValueChange = { pumpName = it }, label = "Pump Name", placeholder = "e.g. City Fuel Station")
             Spacer(Modifier.height(12.dp))
             ZapPayInput(value = ownerName, onValueChange = { ownerName = it }, label = "Owner Name", placeholder = "Your full name")
             Spacer(Modifier.height(12.dp))
-            ZapPayInput(value = licenseNumber, onValueChange = { licenseNumber = it }, label = "License Number", placeholder = "DL/PC/2024/...")
+            ZapPayInput(value = licenseNumber, onValueChange = { licenseNumber = it }, label = "License Number", placeholder = "e.g. DL/PC/2024/...")
+            
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Address & Contact")
             Spacer(Modifier.height(12.dp))
             ZapPayInput(value = address, onValueChange = { address = it }, label = "Address", placeholder = "Street address")
             Spacer(Modifier.height(12.dp))
@@ -106,9 +104,9 @@ fun SetupPumpScreen(
             Spacer(Modifier.height(12.dp))
             ZapPayInput(value = email, onValueChange = { email = it }, label = "Email (optional)", placeholder = "owner@example.com", keyboardType = KeyboardType.Email, imeAction = ImeAction.Done)
 
-            Spacer(Modifier.height(16.dp))
-            Text("Location", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Gray900)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Location")
+            Spacer(Modifier.height(12.dp))
             ZapPayButton(
                 text = if (locationLoading) "Getting location..." else "Get Current Location",
                 onClick = {
@@ -130,13 +128,13 @@ fun SetupPumpScreen(
                 isLoading = locationLoading,
                 variant = com.zappay.app.ui.components.ButtonVariant.OUTLINE,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ZapPayInput(value = latitude, onValueChange = { latitude = it }, label = "Latitude", placeholder = "19.0760", modifier = Modifier.weight(1f), keyboardType = KeyboardType.Decimal)
                 ZapPayInput(value = longitude, onValueChange = { longitude = it }, label = "Longitude", placeholder = "72.8777", modifier = Modifier.weight(1f), keyboardType = KeyboardType.Decimal)
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
 
             if (state.error != null) {
                 ErrorMessage(state.error!!)
