@@ -17,7 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "BASE_URL", "\"http://192.168.29.57:8000/api/v1/\"")
+        buildConfigField("String", "BASE_URL", "\"https://zappay-api.onrender.com/api/v1/\"")
     }
 
     buildFeatures { compose = true; buildConfig = true }

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zappay.app.data.remote.dto.MandateDto
 import com.zappay.app.data.remote.dto.StationDto
-import com.zappay.app.data.remote.dto.VehicleDto
+import com.zappay.app.data.remote.dto.ConsumerVehicleDto
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
 
@@ -151,7 +151,7 @@ fun CustomerDashboardScreen(
             Spacer(Modifier.height(18.dp))
 
             // ── 360° VEHICLE IDENTITY & COMPLIANCE VAULT ─────────────────────
-            val primaryVehicle = state.vehicles.firstOrNull()
+            val primaryVehicle = state.consumerVehicles.firstOrNull()
             VehicleVaultBannerCard(
                 vehicle = primaryVehicle,
                 onOpenVault = { showVaultSheet = true },
@@ -227,7 +227,7 @@ fun CustomerDashboardScreen(
 
     // 1. Compliance Vault Sheet
     if (showVaultSheet) {
-        val v = state.vehicles.firstOrNull()
+        val v = state.consumerVehicles.firstOrNull()
         AlertDialog(
             onDismissRequest = { showVaultSheet = false },
             title = { Text("360° Vehicle Compliance Vault", fontWeight = FontWeight.Bold) },
@@ -379,7 +379,7 @@ fun CustomerDashboardScreen(
 
 @Composable
 private fun VehicleVaultBannerCard(
-    vehicle: VehicleDto?,
+    vehicle: ConsumerVehicleDto?,
     onOpenVault: () -> Unit,
 ) {
     Card(

@@ -2,10 +2,13 @@ package com.zappay.app.ui.customer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zappay.app.data.local.TokenManager
 import com.zappay.app.data.remote.api.ZapPayApi
+import com.zappay.app.data.remote.dto.ConsumerVehicleDto
 import com.zappay.app.data.remote.dto.MandateDto
 import com.zappay.app.data.remote.dto.StationDto
 import com.zappay.app.data.remote.dto.TransactionDto
+import com.zappay.app.data.remote.dto.UserProfileDto
 import com.zappay.app.data.remote.dto.VehicleDto
 import com.zappay.app.data.repository.QRRepository
 import com.zappay.app.data.repository.TransactionRepository
@@ -29,9 +32,17 @@ data class CustomerUiState(
     val qrExpiresAt: String? = null,
     val error: String? = null,
     val rechargeSuccess: Boolean = false,
-
-    // ZapPay 2.0 Ecosystem
+    val vehicleNumber: String = "",
+    val vehicleType: String = "",
     val vehicles: List<VehicleDto> = emptyList(),
+    val qrCodesByVehicle: Map<Int, String> = emptyMap(),
+    val selectedVehicleIndex: Int = 0,
+    val profile: UserProfileDto? = null,
+    val profileSaving: Boolean = false,
+    val profileSaved: Boolean = false,
+
+    // ZapPay 2.0 Forecourt Ecosystem
+    val consumerVehicles: List<ConsumerVehicleDto> = emptyList(),
     val mandates: List<MandateDto> = emptyList(),
     val nearbyStations: List<StationDto> = emptyList(),
     val alertSentMessage: String? = null,
@@ -42,6 +53,8 @@ class CustomerViewModel @Inject constructor(
     private val walletRepository: WalletRepository,
     private val transactionRepository: TransactionRepository,
     private val qrRepository: QRRepository,
+    private val tokenManager: TokenManager,
+    private val userRepository: UserRepository,
     private val api: ZapPayApi,
 ) : ViewModel() {
 
@@ -53,22 +66,23 @@ class CustomerViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             loadWalletSummary()
             loadTransactions()
-            loadVehicles()
+            loadVehicleInfo()
+            loadConsumerVehicles()
             loadMandates()
             loadNearbyStations()
             _uiState.value = _uiState.value.copy(isLoading = false)
         }
     }
 
-    fun loadVehicles() {
+    fun loadConsumerVehicles() {
         viewModelScope.launch {
             try {
                 val res = api.getConsumerVehicles()
                 if (res.isSuccessful && res.body() != null) {
-                    _uiState.value = _uiState.value.copy(vehicles = res.body()!!.vehicles)
+                    _uiState.value = _uiState.value.copy(consumerVehicles = res.body()!!.vehicles)
                 }
             } catch (e: Exception) {
-                // Keep default simulated vehicle
+                // Handled gracefully
             }
         }
     }
@@ -81,7 +95,7 @@ class CustomerViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(mandates = res.body()!!.mandates)
                 }
             } catch (e: Exception) {
-                // Keep default mandates
+                // Handled gracefully
             }
         }
     }
@@ -96,6 +110,21 @@ class CustomerViewModel @Inject constructor(
             } catch (e: Exception) {
                 // Handled gracefully
             }
+        }
+    }
+
+    fun loadVehicleInfo() {
+        viewModelScope.launch {
+            val vn = tokenManager.getVehicleNumber() ?: ""
+            val vt = tokenManager.getVehicleType() ?: ""
+            _uiState.value = _uiState.value.copy(vehicleNumber = vn, vehicleType = vt)
+        }
+    }
+
+    fun saveVehicleInfo(vehicleNumber: String, vehicleType: String) {
+        viewModelScope.launch {
+            tokenManager.saveVehicleInfo(vehicleNumber, vehicleType)
+            _uiState.value = _uiState.value.copy(vehicleNumber = vehicleNumber, vehicleType = vehicleType)
         }
     }
 
@@ -160,7 +189,7 @@ class CustomerViewModel @Inject constructor(
             when (val result = userRepository.getVehicles()) {
                 is Resource.Success -> {
                     _uiState.value = _uiState.value.copy(vehicles = result.data)
-                    result.data.forEachIndexed { index, v ->
+                    result.data.forEachIndexed { _, v ->
                         qrRepository.generateQR(vehicleId = v.id).let { qrResult ->
                             if (qrResult is Resource.Success) {
                                 val newMap = _uiState.value.qrCodesByVehicle.toMutableMap()

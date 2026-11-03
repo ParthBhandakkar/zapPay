@@ -87,7 +87,7 @@ data class ShiftSummaryApiResponse(
 
 // ── Consumer DTOs ─────────────────────────────────────────────────────
 @JsonClass(generateAdapter = true)
-data class VehicleDto(
+data class ConsumerVehicleDto(
     @Json(name = "id") val id: Int,
     @Json(name = "vrn_number") val vrnNumber: String,
     @Json(name = "make_model") val makeModel: String?,
@@ -107,7 +107,7 @@ data class VehicleDto(
 @JsonClass(generateAdapter = true)
 data class VehiclesListResponse(
     @Json(name = "success") val success: Boolean,
-    @Json(name = "vehicles") val vehicles: List<VehicleDto>,
+    @Json(name = "vehicles") val vehicles: List<ConsumerVehicleDto>,
 )
 
 @JsonClass(generateAdapter = true)

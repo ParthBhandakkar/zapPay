@@ -89,6 +89,13 @@ class AccountType(str, enum.Enum):
     FLEET_WALLET = "FLEET_WALLET"
     DEALER_PAYABLE = "DEALER_PAYABLE"
     ZAPPAY_REVENUE = "ZAPPAY_REVENUE"
+    CUSTOMER_WALLET = "customer_wallet"
+    PUMP_RECEIVABLE = "pump_receivable"
+    ZAPPAY_COMMISSION = "zappay_commission"
+    PAYMENT_GATEWAY = "payment_gateway"
+    REFUND_CLEARING = "refund_clearing"
+    SETTLEMENT_PAYABLE = "settlement_payable"
+    TAX_PAYABLE = "tax_payable"
 
 
 # ── Models ─────────────────────────────────────────────────────────────
@@ -379,16 +386,6 @@ class TicketPriority(str, enum.Enum):
     URGENT = "urgent"
 
 
-class AccountType(str, enum.Enum):
-    CUSTOMER_WALLET = "customer_wallet"
-    PUMP_RECEIVABLE = "pump_receivable"
-    ZAPPAY_COMMISSION = "zappay_commission"
-    PAYMENT_GATEWAY = "payment_gateway"
-    REFUND_CLEARING = "refund_clearing"
-    SETTLEMENT_PAYABLE = "settlement_payable"
-    TAX_PAYABLE = "tax_payable"
-
-
 class PumpFuelPrice(Base):
     __tablename__ = "pump_fuel_prices"
 
@@ -575,25 +572,6 @@ class LedgerAccount(Base):
         return f"<LedgerAccount id={self.id} type={self.account_type} balance={self.balance}>"
 
 
-class LedgerEntry(Base):
-    __tablename__ = "ledger_entries"
-
-    id = Column(Integer, primary_key=True, index=True)
-    ledger_account_id = Column(Integer, ForeignKey("ledger_accounts.id"))
-    transaction_id = Column(String(100), ForeignKey("transactions.transaction_id"), nullable=True)
-    entry_type = Column(String(20))
-    amount = Column(Float, nullable=False)
-    balance_before = Column(Float)
-    balance_after = Column(Float)
-    description = Column(Text)
-    created_at = Column(DateTime, server_default=func.now())
-
-    account = relationship("LedgerAccount")
-
-    def __repr__(self):
-        return f"<LedgerEntry id={self.id} type={self.entry_type} amount={self.amount}>"
-
-
 class FleetAccount(Base):
     __tablename__ = "fleet_accounts"
 
@@ -649,6 +627,19 @@ class OTP(Base):
 
 
 # ── ZapPay 2.0 Ecosystem Models ───────────────────────────────────────
+class IdempotencyKey(Base):
+    __tablename__ = "idempotency_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    idempotency_key = Column(String(255), unique=True, index=True, nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    status = Column(String(50), nullable=False)
+    response_body = Column(Text)
+    transaction_id = Column(String(100))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
 class FleetOrganization(Base):
     __tablename__ = "fleet_organizations"
 

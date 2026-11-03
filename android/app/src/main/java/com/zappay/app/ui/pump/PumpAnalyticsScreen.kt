@@ -58,10 +58,8 @@ fun PumpAnalyticsScreen(
         topBar = {
             ZapPayTopBar(
                 title = "Analytics",
-                onBack = {}, // Removed back button since it's typically a bottom tab
+                onBack = null,
                 containerColor = Color.Transparent,
-                contentColor = White,
-                showBackButton = false
             )
         },
     ) { padding ->

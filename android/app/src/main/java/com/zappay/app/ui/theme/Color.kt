@@ -6,24 +6,27 @@ import androidx.compose.ui.graphics.Color
 // ZapPay Premium Color System — Deep Blue/Teal + Gold Accents
 // ═══════════════════════════════════════════════════════════
 
-val Green700 = Color(0xFF15803D)
-val Green500 = Color(0xFF22C55E)
-val Green100 = Color(0xFFDCFCE7)
-val Red500 = Color(0xFFEF4444)
-val Red100 = Color(0xFFFEE2E2)
-val Yellow500 = Color(0xFFF59E0B)
-val Yellow100 = Color(0xFFFEF3C7)
-val Blue500 = Color(0xFF3B82F6)
-val Blue100 = Color(0xFFDBEAFE)
+// ── Primary: Deep Teal Blue ──
+val Primary900 = Color(0xFF0A2540)    // Deepest navy
+val Primary800 = Color(0xFF0D3356)
+val Primary700 = Color(0xFF0F4C75)    // Dark teal
+val Primary600 = Color(0xFF1268A0)
+val Primary500 = Color(0xFF1685D3)    // Main brand color
+val Primary400 = Color(0xFF3B9FE6)
+val Primary300 = Color(0xFF6DBAF0)
+val Primary200 = Color(0xFFA0D4F7)
+val Primary100 = Color(0xFFD0EAFB)
+val Primary50  = Color(0xFFF0F8FF)
 
-val Gray900 = Color(0xFF111827)
-val Gray700 = Color(0xFF374151)
-val Gray600 = Color(0xFF4B5563)
-val Gray500 = Color(0xFF6B7280)
-val Gray300 = Color(0xFFD1D5DB)
-val Gray200 = Color(0xFFE5E7EB)
-val Gray100 = Color(0xFFF3F4F6)
-val Gray50 = Color(0xFFF9FAFB)
+// ── Accent: Gold / Amber ──
+val Accent700 = Color(0xFFB8860B)
+val Accent600 = Color(0xFFD4A017)
+val Accent500 = Color(0xFFF0C040)     // Main gold accent
+val Accent400 = Color(0xFFF5D060)
+val Accent300 = Color(0xFFFAE088)
+val Accent200 = Color(0xFFFCEBB0)
+val Accent100 = Color(0xFFFFF8E1)
+val Accent50  = Color(0xFFFFFDF5)
 
 // ── Teal / Cyan secondary ──
 val Teal700 = Color(0xFF00796B)
@@ -103,8 +106,13 @@ val Blue100  = Info100
 
 val Gray900 = Neutral900
 val Gray700 = Neutral700
+val Gray600 = Neutral600
 val Gray500 = Neutral500
 val Gray300 = Neutral300
 val Gray200 = Neutral200
 val Gray100 = Neutral100
 val Gray50  = Neutral50
+
+val Green700 = Success700
+val Success600 = Color(0xFF16A34A)
+val Warning600 = Color(0xFFD97706)
