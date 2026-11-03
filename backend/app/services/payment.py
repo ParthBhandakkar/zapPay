@@ -6,8 +6,18 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
-import razorpay
-import stripe
+try:
+    import razorpay
+except Exception as _rz_err:
+    razorpay = None
+    logger = logging.getLogger("zappay.services.payment")
+    logger.warning(f"Razorpay library not available: {_rz_err}")
+
+try:
+    import stripe
+except Exception as _st_err:
+    stripe = None
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -74,11 +84,14 @@ def save_idempotency(db: Session, idempotency_key: str, request_hash: str, respo
 
 # ── Payment Gateway Clients ────────────────────────────────────────────
 razorpay_client = None
-if settings.razorpay_key_id and settings.razorpay_key_secret:
-    razorpay_client = razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
-    logger.info("Razorpay client initialized")
+if razorpay and settings.razorpay_key_id and settings.razorpay_key_secret:
+    try:
+        razorpay_client = razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
+        logger.info("Razorpay client initialized")
+    except Exception as e:
+        logger.warning(f"Failed to init Razorpay client: {e}")
 
-if settings.stripe_secret_key:
+if stripe and settings.stripe_secret_key:
     stripe.api_key = settings.stripe_secret_key
     logger.info("Stripe client initialized")
 
