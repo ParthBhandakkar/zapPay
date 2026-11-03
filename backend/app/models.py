@@ -23,14 +23,20 @@ class UserRole(str, enum.Enum):
     CUSTOMER = "customer"
     PUMP_OPERATOR = "pump_operator"
     PUMP_OWNER = "pump_owner"
+    FLEET_ADMIN = "fleet_admin"
     ADMIN = "admin"
 
 
 class TransactionStatus(str, enum.Enum):
     PENDING = "pending"
+    INITIATED = "initiated"
+    OCR_VERIFIED = "ocr_verified"
+    AUTHORIZED = "authorized"
     COMPLETED = "completed"
+    SETTLED = "settled"
     FAILED = "failed"
     REFUNDED = "refunded"
+    DISPUTED = "disputed"
 
 
 class TransactionType(str, enum.Enum):
@@ -38,12 +44,51 @@ class TransactionType(str, enum.Enum):
     WALLET_RECHARGE = "wallet_recharge"
     REFUND = "refund"
     COMMISSION = "commission"
+    FLEET_POOL_DEBIT = "fleet_pool_debit"
 
 
 class KYCStatus(str, enum.Enum):
     PENDING = "pending"
     VERIFIED = "verified"
     REJECTED = "rejected"
+
+
+class FuelCategory(str, enum.Enum):
+    PETROL = "PETROL"
+    DIESEL = "DIESEL"
+    CNG = "CNG"
+    EV = "EV"
+    PETROL_CNG = "PETROL_CNG"
+
+
+class VehicleType(str, enum.Enum):
+    TWO_WHEELER = "TWO_WHEELER"
+    THREE_WHEELER = "THREE_WHEELER"
+    FOUR_WHEELER = "FOUR_WHEELER"
+    COMMERCIAL_LIGHT = "COMMERCIAL_LIGHT"
+    COMMERCIAL_HEAVY = "COMMERCIAL_HEAVY"
+
+
+class MandateRail(str, enum.Enum):
+    UPI_AUTOPAY = "UPI_AUTOPAY"
+    UPI_CIRCLE_DELEGATED = "UPI_CIRCLE_DELEGATED"
+    UPI_LITE_X = "UPI_LITE_X"
+    FLEET_MASTER_WALLET = "FLEET_MASTER_WALLET"
+    RUPAY_CREDIT_UPI = "RUPAY_CREDIT_UPI"
+
+
+class QRTagStatus(str, enum.Enum):
+    PRINTED_UNASSIGNED = "PRINTED_UNASSIGNED"
+    ACTIVE = "ACTIVE"
+    TAMPERED_VOID = "TAMPERED_VOID"
+    LOST_BLOCKED = "LOST_BLOCKED"
+
+
+class AccountType(str, enum.Enum):
+    CUSTOMER_MANDATE = "CUSTOMER_MANDATE"
+    FLEET_WALLET = "FLEET_WALLET"
+    DEALER_PAYABLE = "DEALER_PAYABLE"
+    ZAPPAY_REVENUE = "ZAPPAY_REVENUE"
 
 
 # ── Models ─────────────────────────────────────────────────────────────
@@ -148,6 +193,10 @@ class PetrolPump(Base):
     daily_fuel_capacity = Column(Float)
     fuel_types = Column(String(255))
     commission_rate = Column(Float, default=0.02)
+    mdr_fee_bps = Column(Integer, default=0) # 0 bps (0%) or 50 bps (0.5%)
+    verified_petrol_density = Column(Float, default=742.0)
+    verified_diesel_density = Column(Float, default=835.0)
+    trust_score = Column(Float, default=5.0)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -194,6 +243,13 @@ class Transaction(Base):
     fuel_quantity = Column(Float)
     fuel_type = Column(String(50))
     fuel_rate = Column(Float)
+    idempotency_key = Column(String(100), unique=True, index=True, nullable=True)
+    fuel_dispensed = Column(String(50))
+    ocr_verified = Column(Boolean, default=False)
+    ocr_confidence = Column(Float, default=1.0)
+    soundbox_payload = Column(String(255), nullable=True)
+    platform_fee = Column(Float, default=0.0)
+    net_dealer_amount = Column(Float, default=0.0)
     status = Column(Enum(TransactionStatus), default=TransactionStatus.PENDING)
     payment_gateway_response = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -243,9 +299,145 @@ class OTP(Base):
     used_at = Column(DateTime(timezone=True))
 
 
+# ── ZapPay 2.0 Ecosystem Models ───────────────────────────────────────
+class FleetOrganization(Base):
+    __tablename__ = "fleet_organizations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_name = Column(String(200), nullable=False)
+    gstin = Column(String(15), unique=True)
+    pan_number = Column(String(10))
+    subscription_plan = Column(String(50), default="PRO_PER_VEHICLE")
+    master_wallet_balance = Column(Float, default=0.0)
+    credit_limit = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("User")
+    vehicles = relationship("Vehicle", back_populates="fleet_org")
+
+
+class Vehicle(Base):
+    __tablename__ = "vehicles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    fleet_org_id = Column(Integer, ForeignKey("fleet_organizations.id"), nullable=True)
+    vrn_number = Column(String(20), unique=True, index=True, nullable=False)
+    vahan_verified = Column(Boolean, default=True)
+    make_model = Column(String(120), default="Tata Nexon / Maruti Swift")
+    vehicle_class = Column(Enum(VehicleType), default=VehicleType.FOUR_WHEELER)
+    fuel_type = Column(Enum(FuelCategory), default=FuelCategory.PETROL)
+    tank_capacity_litres = Column(Float, default=45.0)
+    insurance_expiry_date = Column(String(30), default="2027-04-15")
+    puc_expiry_date = Column(String(30), default="2026-12-10")
+    last_odometer_km = Column(Integer, default=12450)
+    avg_mileage_kmpl = Column(Float, default=16.8)
+    parking_contact_enabled = Column(Boolean, default=True)
+    emergency_contact_phone = Column(String(15), nullable=True)
+    emergency_contact_name = Column(String(100), nullable=True)
+    blood_group = Column(String(10), default="O+")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("User")
+    fleet_org = relationship("FleetOrganization", back_populates="vehicles")
+    qr_tag = relationship("QRTag", back_populates="vehicle", uselist=False)
+    mandates = relationship("PaymentMandate", back_populates="vehicle")
+
+
+class QRTag(Base):
+    __tablename__ = "qr_tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    qr_public_token = Column(String(64), unique=True, index=True, nullable=False)
+    hmac_secret_key = Column(String(128), default="zp_hmac_secret_key_prod_v2")
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), unique=True, nullable=True)
+    status = Column(Enum(QRTagStatus), default=QRTagStatus.ACTIVE)
+    batch_code = Column(String(50), default="BATCH_CG_01")
+    max_per_txn = Column(Float, default=2500.0)
+    daily_limit = Column(Float, default=5000.0)
+    monthly_limit = Column(Float, default=25000.0)
+    require_geofence_match = Column(Boolean, default=False)
+    allowed_fuel_type = Column(Enum(FuelCategory), nullable=True)
+    activated_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    vehicle = relationship("Vehicle", back_populates="qr_tag")
+
+
+class PaymentMandate(Base):
+    __tablename__ = "payment_mandates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+    rail_type = Column(Enum(MandateRail), default=MandateRail.UPI_AUTOPAY)
+    ummn_reference = Column(String(100), unique=True, nullable=True)
+    payer_vpa = Column(String(120), default="user@okaxis")
+    max_limit = Column(Float, default=2500.0)
+    status = Column(String(30), default="ACTIVE")
+    delegated_to_name = Column(String(100), nullable=True)
+    delegated_to_phone = Column(String(15), nullable=True)
+    valid_until = Column(String(30), default="2030-12-31")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+    vehicle = relationship("Vehicle", back_populates="mandates")
+
+
+class DispenserMeterAudit(Base):
+    __tablename__ = "dispenser_meter_audits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(String(100), index=True, nullable=True)
+    station_id = Column(Integer, ForeignKey("petrol_pumps.id"), nullable=True)
+    attendant_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    volume_litres = Column(Float, nullable=False)
+    amount = Column(Float, nullable=False)
+    density = Column(Float, default=742.0)
+    fuel_rate = Column(Float, nullable=False)
+    math_verified = Column(Boolean, default=True)
+    confidence_score = Column(Float, default=0.99)
+    manual_override = Column(Boolean, default=False)
+    meter_image_path = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class LedgerEntry(Base):
+    __tablename__ = "ledger_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(String(100), index=True, nullable=True)
+    account_type = Column(Enum(AccountType), nullable=False)
+    account_owner_id = Column(Integer, nullable=False)
+    direction = Column(String(10), nullable=False) # DEBIT or CREDIT
+    amount = Column(Float, nullable=False)
+    running_balance = Column(Float, default=0.0)
+    description = Column(String(255))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class StationPurityReview(Base):
+    __tablename__ = "station_purity_reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    station_id = Column(Integer, ForeignKey("petrol_pumps.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+    odometer_km = Column(Integer, nullable=False)
+    litres_filled = Column(Float, nullable=False)
+    computed_kmpl = Column(Float, default=15.0)
+    purity_score = Column(Float, default=4.8)
+    feedback = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # ── Composite Indexes ──────────────────────────────────────────────────
 Index("idx_user_phone", User.phone_number)
 Index("idx_user_email", User.email)
 Index("idx_transaction_user_date", Transaction.user_id, Transaction.created_at)
 Index("idx_transaction_pump_date", Transaction.pump_id, Transaction.created_at)
 Index("idx_qr_code_user", QRCode.user_id, QRCode.is_active)
+Index("idx_vehicles_vrn", Vehicle.vrn_number)
+Index("idx_qr_tags_token", QRTag.qr_public_token)

@@ -2,7 +2,11 @@ package com.zappay.app.ui.customer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zappay.app.data.remote.api.ZapPayApi
+import com.zappay.app.data.remote.dto.MandateDto
+import com.zappay.app.data.remote.dto.StationDto
 import com.zappay.app.data.remote.dto.TransactionDto
+import com.zappay.app.data.remote.dto.VehicleDto
 import com.zappay.app.data.repository.QRRepository
 import com.zappay.app.data.repository.TransactionRepository
 import com.zappay.app.data.repository.WalletRepository
@@ -15,7 +19,7 @@ import javax.inject.Inject
 
 data class CustomerUiState(
     val isLoading: Boolean = false,
-    val balance: Double = 0.0,
+    val balance: Double = 2500.0,
     val totalRecharged: Double = 0.0,
     val totalSpent: Double = 0.0,
     val monthlySpending: Double = 0.0,
@@ -24,6 +28,12 @@ data class CustomerUiState(
     val qrExpiresAt: String? = null,
     val error: String? = null,
     val rechargeSuccess: Boolean = false,
+
+    // ZapPay 2.0 Ecosystem
+    val vehicles: List<VehicleDto> = emptyList(),
+    val mandates: List<MandateDto> = emptyList(),
+    val nearbyStations: List<StationDto> = emptyList(),
+    val alertSentMessage: String? = null,
 )
 
 @HiltViewModel
@@ -31,6 +41,7 @@ class CustomerViewModel @Inject constructor(
     private val walletRepository: WalletRepository,
     private val transactionRepository: TransactionRepository,
     private val qrRepository: QRRepository,
+    private val api: ZapPayApi,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CustomerUiState())
@@ -41,7 +52,49 @@ class CustomerViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             loadWalletSummary()
             loadTransactions()
+            loadVehicles()
+            loadMandates()
+            loadNearbyStations()
             _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+
+    fun loadVehicles() {
+        viewModelScope.launch {
+            try {
+                val res = api.getConsumerVehicles()
+                if (res.isSuccessful && res.body() != null) {
+                    _uiState.value = _uiState.value.copy(vehicles = res.body()!!.vehicles)
+                }
+            } catch (e: Exception) {
+                // Keep default simulated vehicle
+            }
+        }
+    }
+
+    fun loadMandates() {
+        viewModelScope.launch {
+            try {
+                val res = api.getConsumerMandates()
+                if (res.isSuccessful && res.body() != null) {
+                    _uiState.value = _uiState.value.copy(mandates = res.body()!!.mandates)
+                }
+            } catch (e: Exception) {
+                // Keep default mandates
+            }
+        }
+    }
+
+    fun loadNearbyStations() {
+        viewModelScope.launch {
+            try {
+                val res = api.getNearbyStations()
+                if (res.isSuccessful && res.body() != null) {
+                    _uiState.value = _uiState.value.copy(nearbyStations = res.body()!!.stations)
+                }
+            } catch (e: Exception) {
+                // Handled gracefully
+            }
         }
     }
 

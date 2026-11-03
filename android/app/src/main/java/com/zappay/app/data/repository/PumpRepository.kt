@@ -99,4 +99,91 @@ class PumpRepository @Inject constructor(
             Resource.Error(e.message ?: "Network error")
         }
     }
+
+    // ── ZapPay 2.0 Forecourt Operations ─────────────────────────────────
+    suspend fun scanForecourtVehicle(token: String, stationId: Int = 1): Resource<ScanVehicleApiResponse> {
+        return try {
+            val response = api.scanVehicle(ScanVehicleApiRequest(qrPublicToken = token, stationId = stationId))
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Vehicle verification failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network connection error")
+        }
+    }
+
+    suspend fun verifyMeterOCR(
+        volumeLitres: Double,
+        amount: Double,
+        fuelRate: Double,
+        density: Double = 742.0,
+        manualOverride: Boolean = false,
+    ): Resource<VerifyMeterOCRApiResponse> {
+        return try {
+            val response = api.verifyMeterOCR(
+                VerifyMeterOCRApiRequest(
+                    volumeLitres = volumeLitres,
+                    amount = amount,
+                    fuelRate = fuelRate,
+                    density = density,
+                    manualOverride = manualOverride,
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error("Meter OCR validation failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network connection error")
+        }
+    }
+
+    suspend fun executeForecourtDebit(
+        qrToken: String,
+        fuelDispensed: String,
+        volumeLitres: Double,
+        fuelRate: Double,
+        amount: Double,
+        stationId: Int = 1,
+        density: Double = 742.0,
+        manualOverride: Boolean = false,
+    ): Resource<ExecuteDebitApiResponse> {
+        return try {
+            val response = api.executeDebit(
+                ExecuteDebitApiRequest(
+                    qrPublicToken = qrToken,
+                    fuelDispensed = fuelDispensed,
+                    volumeLitres = volumeLitres,
+                    fuelRate = fuelRate,
+                    amount = amount,
+                    stationId = stationId,
+                    density = density,
+                    manualOverride = manualOverride,
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error(response.errorBody()?.string() ?: "Debit execution failed")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network connection error")
+        }
+    }
+
+    suspend fun getForecourtShiftSummary(stationId: Int = 1): Resource<ShiftSummaryApiResponse> {
+        return try {
+            val response = api.getShiftSummary(stationId)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error("Failed to fetch shift summary")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
 }

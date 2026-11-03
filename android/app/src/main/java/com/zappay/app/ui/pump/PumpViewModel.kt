@@ -35,6 +35,13 @@ data class PumpUiState(
     val purchaseSuccess: Boolean = false,
     val purchaseMessage: String? = null,
 
+    // ZapPay 2.0 Forecourt Ecosystem
+    val forecourtVerifiedVehicle: ScanVehicleApiResponse? = null,
+    val meterOcrResult: VerifyMeterOCRApiResponse? = null,
+    val debitResult: ExecuteDebitApiResponse? = null,
+    val soundboxVoiceMessage: String? = null,
+    val shiftSummary: ShiftSummaryApiResponse? = null,
+
     // Settings
     val settings: Map<String, Any> = emptyMap(),
 
@@ -208,5 +215,115 @@ class PumpViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    // ── ZapPay 2.0 Forecourt Loop ───────────────────────────────────────
+    fun scanForecourtVehicle(token: String, stationId: Int = 1) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.scanForecourtVehicle(token, stationId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        forecourtVerifiedVehicle = result.data,
+                    )
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.message ?: "Vehicle scan failed",
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun verifyMeterOCR(
+        volumeLitres: Double,
+        amount: Double,
+        fuelRate: Double,
+        density: Double = 742.0,
+        manualOverride: Boolean = false,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.verifyMeterOCR(volumeLitres, amount, fuelRate, density, manualOverride)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        meterOcrResult = result.data,
+                    )
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun executeForecourtDebit(
+        qrToken: String,
+        fuelDispensed: String,
+        volumeLitres: Double,
+        fuelRate: Double,
+        amount: Double,
+        stationId: Int = 1,
+        density: Double = 742.0,
+        manualOverride: Boolean = false,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.executeForecourtDebit(
+                qrToken = qrToken,
+                fuelDispensed = fuelDispensed,
+                volumeLitres = volumeLitres,
+                fuelRate = fuelRate,
+                amount = amount,
+                stationId = stationId,
+                density = density,
+                manualOverride = manualOverride,
+            )) {
+                is Resource.Success -> {
+                    val debitData = result.data
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        purchaseSuccess = true,
+                        debitResult = debitData,
+                        soundboxVoiceMessage = debitData.soundboxPayload ?: debitData.soundboxTtsEnglish,
+                    )
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.message ?: "Payment auto-debit failed",
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun loadShiftSummary(stationId: Int = 1) {
+        viewModelScope.launch {
+            when (val result = pumpRepository.getForecourtShiftSummary(stationId)) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(shiftSummary = result.data)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun resetForecourtFlow() {
+        _uiState.value = _uiState.value.copy(
+            forecourtVerifiedVehicle = null,
+            meterOcrResult = null,
+            debitResult = null,
+            soundboxVoiceMessage = null,
+            purchaseSuccess = false,
+            error = null,
+        )
     }
 }

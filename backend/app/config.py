@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional, List, ClassVar
 import os
 import warnings
@@ -9,6 +10,13 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     debug: bool = False
     environment: str = "production"
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug(cls, v):
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "dev", "development")
+        return bool(v)
 
     # --- Database (Supabase PostgreSQL) ---
     database_url: str = "postgresql://postgres:password@localhost:5432/postgres"
@@ -87,6 +95,9 @@ class Settings(BaseSettings):
 
     @property
     def database_url_with_ssl(self) -> str:
+        if self.database_url.startswith("sqlite"):
+            return self.database_url
+
         from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
         parsed = urlparse(self.database_url)

@@ -106,4 +106,27 @@ interface ZapPayApi {
     // ── Health ─────────────────────────────────────────────────────────
     @GET("../health")
     suspend fun healthCheck(): Response<GenericResponse>
+
+    // ── ZapPay 2.0 Forecourt & AI OCR Endpoints ─────────────────────────
+    @POST("forecourt/scan-vehicle")
+    suspend fun scanVehicle(@Body request: ScanVehicleApiRequest): Response<ScanVehicleApiResponse>
+
+    @POST("forecourt/verify-meter-ocr")
+    suspend fun verifyMeterOCR(@Body request: VerifyMeterOCRApiRequest): Response<VerifyMeterOCRApiResponse>
+
+    @POST("forecourt/execute-debit")
+    suspend fun executeDebit(@Body request: ExecuteDebitApiRequest): Response<ExecuteDebitApiResponse>
+
+    @GET("forecourt/shift-summary")
+    suspend fun getShiftSummary(@Query("station_id") stationId: Int = 1): Response<ShiftSummaryApiResponse>
+
+    // ── ZapPay 2.0 Consumer Vault & UPI Circle ──────────────────────────
+    @GET("consumer/vehicles")
+    suspend fun getConsumerVehicles(): Response<VehiclesListResponse>
+
+    @GET("consumer/mandates")
+    suspend fun getConsumerMandates(): Response<MandatesListResponse>
+
+    @GET("consumer/stations/nearby")
+    suspend fun getNearbyStations(): Response<NearbyStationsResponse>
 }
