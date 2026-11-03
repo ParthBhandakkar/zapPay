@@ -141,6 +141,18 @@ async def get_my_pump(
         
     return pump
 
+def _parse_fuel_types(raw: Optional[str]) -> list:
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return [t.strip() for t in raw.split(",") if t.strip()]
+
+
 @router.get("/nearby")
 async def get_nearby_pumps(
     latitude: float,
@@ -179,7 +191,7 @@ async def get_nearby_pumps(
                 "latitude": pump.latitude,
                 "longitude": pump.longitude,
                 "distance_km": round(distance, 2),
-                "fuel_types": json.loads(pump.fuel_types) if pump.fuel_types else []
+                "fuel_types": _parse_fuel_types(pump.fuel_types)
             }
             nearby_pumps.append(pump_data)
     
