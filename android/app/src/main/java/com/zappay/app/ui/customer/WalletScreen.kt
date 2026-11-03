@@ -2,10 +2,14 @@ package com.zappay.app.ui.customer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -28,13 +32,7 @@ fun WalletScreen(
     LaunchedEffect(Unit) { viewModel.loadDashboard(); viewModel.clearRechargeSuccess() }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Wallet", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Wallet", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -47,7 +45,7 @@ fun WalletScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Add Money", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            SectionHeader(title = "Add Money")
             Spacer(Modifier.height(12.dp))
 
             ZapPayInput(
@@ -57,6 +55,7 @@ fun WalletScreen(
                 placeholder = "Enter amount",
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,
+                leadingIcon = Icons.Outlined.CurrencyRupee,
             )
             Spacer(Modifier.height(12.dp))
 
@@ -67,6 +66,10 @@ fun WalletScreen(
                         selected = amount.toDoubleOrNull() == amt.toDouble(),
                         onClick = { amount = amt.toString() },
                         label = { Text("₹$amt", fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Primary50,
+                            selectedLabelColor = Primary700,
+                        ),
                     )
                 }
             }
@@ -89,15 +92,38 @@ fun WalletScreen(
             Spacer(Modifier.height(24.dp))
 
             // Recent transactions
-            Text("Recent Transactions", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            SectionHeader(title = "Recent Transactions")
             Spacer(Modifier.height(8.dp))
-            state.transactions.take(5).forEach { tx ->
-                TransactionItem(
-                    title = tx.fuelType ?: tx.transactionType.replace("_", " "),
-                    subtitle = tx.createdAt.formatDate(),
-                    amount = tx.amount,
-                    isCredit = tx.transactionType == "wallet_recharge",
+
+            if (state.transactions.isEmpty()) {
+                ZapPayEmptyState(
+                    icon = Icons.Outlined.ReceiptLong,
+                    title = "No transactions",
+                    subtitle = "Your recent transactions will appear here",
                 )
+            } else {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                ) {
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        state.transactions.take(5).forEach { tx ->
+                            TransactionItem(
+                                title = tx.fuelType ?: tx.transactionType.replace("_", " "),
+                                subtitle = tx.createdAt.formatDate(),
+                                amount = tx.amount,
+                                isCredit = tx.transactionType == "wallet_recharge",
+                            )
+                            if (tx != state.transactions.take(5).last()) {
+                                HorizontalDivider(
+                                    Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -5,6 +5,9 @@ set -e
 PORT="${PORT:-8000}"
 WORKERS="${WORKERS:-1}"  # 1 worker on Render free tier (512MB, EasyOCR/Torch is heavy)
 
+echo "Running Alembic migrations..."
+alembic upgrade head 2>&1 || echo "Alembic migration failed (non-fatal)"
+
 echo "Starting ZapPay API on port $PORT with $WORKERS workers"
 
 exec gunicorn app.main:app \

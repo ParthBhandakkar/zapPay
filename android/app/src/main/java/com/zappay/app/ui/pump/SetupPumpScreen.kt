@@ -1,11 +1,15 @@
 package com.zappay.app.ui.pump
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -14,15 +18,18 @@ import androidx.compose.ui.unit.sp
 import com.zappay.app.data.remote.dto.PumpRegisterRequest
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
+import com.zappay.app.util.LocationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupPumpScreen(
     viewModel: PumpViewModel,
+    locationHelper: LocationHelper,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     var pumpName by remember { mutableStateOf("") }
     var ownerName by remember { mutableStateOf("") }
@@ -33,6 +40,25 @@ fun SetupPumpScreen(
     var pincode by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var latitude by remember { mutableStateOf("") }
+    var longitude by remember { mutableStateOf("") }
+    var locationLoading by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            locationHelper.getFreshLocation { loc ->
+                loc?.let {
+                    latitude = "%.6f".format(it.latitude)
+                    longitude = "%.6f".format(it.longitude)
+                }
+                locationLoading = false
+            }
+        } else {
+            locationLoading = false
+        }
+    }
 
     LaunchedEffect(state.registrationSuccess) {
         if (state.registrationSuccess) {
@@ -42,13 +68,7 @@ fun SetupPumpScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Register Pump", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back", color = Purple500) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
-            )
-        },
+        topBar = { ZapPayTopBar(title = "Register Pump", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -57,14 +77,19 @@ fun SetupPumpScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
-            Text("Fill in your pump details", fontSize = 14.sp, color = Gray500)
-            Spacer(Modifier.height(20.dp))
+            Text("Fill in your pump details", fontSize = 15.sp, color = Neutral500)
+            Spacer(Modifier.height(24.dp))
 
-            ZapPayInput(value = pumpName, onValueChange = { pumpName = it }, label = "Pump Name", placeholder = "City Fuel Station")
+            SectionHeader("Basic Details")
+            Spacer(Modifier.height(12.dp))
+            ZapPayInput(value = pumpName, onValueChange = { pumpName = it }, label = "Pump Name", placeholder = "e.g. City Fuel Station")
             Spacer(Modifier.height(12.dp))
             ZapPayInput(value = ownerName, onValueChange = { ownerName = it }, label = "Owner Name", placeholder = "Your full name")
             Spacer(Modifier.height(12.dp))
-            ZapPayInput(value = licenseNumber, onValueChange = { licenseNumber = it }, label = "License Number", placeholder = "DL/PC/2024/...")
+            ZapPayInput(value = licenseNumber, onValueChange = { licenseNumber = it }, label = "License Number", placeholder = "e.g. DL/PC/2024/...")
+            
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Address & Contact")
             Spacer(Modifier.height(12.dp))
             ZapPayInput(value = address, onValueChange = { address = it }, label = "Address", placeholder = "Street address")
             Spacer(Modifier.height(12.dp))
@@ -80,6 +105,36 @@ fun SetupPumpScreen(
             ZapPayInput(value = email, onValueChange = { email = it }, label = "Email (optional)", placeholder = "owner@example.com", keyboardType = KeyboardType.Email, imeAction = ImeAction.Done)
 
             Spacer(Modifier.height(24.dp))
+            SectionHeader("Location")
+            Spacer(Modifier.height(12.dp))
+            ZapPayButton(
+                text = if (locationLoading) "Getting location..." else "Get Current Location",
+                onClick = {
+                    locationLoading = true
+                    if (locationHelper.hasLocationPermission()) {
+                        locationHelper.getFreshLocation { loc ->
+                            loc?.let {
+                                latitude = "%.6f".format(it.latitude)
+                                longitude = "%.6f".format(it.longitude)
+                            }
+                            locationLoading = false
+                        }
+                    } else {
+                        locationPermissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        )
+                    }
+                },
+                isLoading = locationLoading,
+                variant = com.zappay.app.ui.components.ButtonVariant.OUTLINE,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ZapPayInput(value = latitude, onValueChange = { latitude = it }, label = "Latitude", placeholder = "19.0760", modifier = Modifier.weight(1f), keyboardType = KeyboardType.Decimal)
+                ZapPayInput(value = longitude, onValueChange = { longitude = it }, label = "Longitude", placeholder = "72.8777", modifier = Modifier.weight(1f), keyboardType = KeyboardType.Decimal)
+            }
+
+            Spacer(Modifier.height(32.dp))
 
             if (state.error != null) {
                 ErrorMessage(state.error!!)
@@ -100,6 +155,8 @@ fun SetupPumpScreen(
                             pincode = pincode,
                             phoneNumber = phoneNumber,
                             email = email.ifEmpty { null },
+                            latitude = latitude.toDoubleOrNull(),
+                            longitude = longitude.toDoubleOrNull(),
                         )
                     )
                 },

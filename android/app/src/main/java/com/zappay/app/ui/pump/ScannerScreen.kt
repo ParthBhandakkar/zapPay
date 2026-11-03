@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.speech.tts.TextToSpeech
 import android.util.Size
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -119,7 +121,72 @@ fun ScannerScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
             )
-        },
+        }
+    }
+
+    if (showSuccessDialog) {
+        val p = state
+        val total = "${"%.2f".format((p.purchaseFuelQuantity ?: 0.0) * (p.purchaseFuelRate ?: 0.0))}"
+        val timestamp = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+
+        AlertDialog(
+            onDismissRequest = {
+                showSuccessDialog = false
+                scannedQrData = null
+                cameraActive = true
+                scanMode = "qr"
+                manualInput = ""
+                fuelQuantity = ""
+                viewModel.clearPurchaseSuccess()
+                viewModel.clearScannedCustomer()
+                viewModel.clearLookedUpVehicle()
+            },
+            icon = { Text("✅", fontSize = 28.sp) },
+            title = { Text("Payment Successful", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Card(colors = CardDefaults.cardColors(containerColor = Success50), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(p.purchaseMessage ?: "Transaction completed", fontSize = 13.sp, color = Success700)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    Text("Transaction Details", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Spacer(Modifier.height(8.dp))
+
+                    DetailRow("Customer", p.purchaseCustomerName ?: "N/A")
+                    p.purchaseCustomerPhone?.let { DetailRow("Phone", it) }
+                    p.purchaseVehicleNumber?.let { DetailRow("Vehicle", it) }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    p.purchaseFuelType?.let { DetailRow("Fuel Type", it) }
+                    DetailRow("Quantity", "${"%.2f".format(p.purchaseFuelQuantity ?: 0.0)} L")
+                    DetailRow("Rate", "₹ ${"%.2f".format(p.purchaseFuelRate ?: 0.0)}/L")
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    DetailRow("Total Amount", "₹ $total", isBold = true)
+                    Spacer(Modifier.height(4.dp))
+                    DetailRow("Time", timestamp)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showSuccessDialog = false
+                    scannedQrData = null
+                    cameraActive = true
+                    scanMode = "qr"
+                    manualInput = ""
+                    fuelQuantity = ""
+                    viewModel.clearPurchaseSuccess()
+                    viewModel.clearScannedCustomer()
+                    viewModel.clearLookedUpVehicle()
+                }, colors = ButtonDefaults.buttonColors(containerColor = Success500)) { Text("Done") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+        )
+    }
+
+    Scaffold(
+        topBar = { ZapPayTopBar(title = "Scan & Pay", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier

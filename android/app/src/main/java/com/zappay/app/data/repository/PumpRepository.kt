@@ -3,6 +3,7 @@ package com.zappay.app.data.repository
 import com.zappay.app.data.remote.api.ZapPayApi
 import com.zappay.app.data.remote.dto.*
 import com.zappay.app.util.Resource
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +25,17 @@ class PumpRepository @Inject constructor(
         return try {
             val response = api.registerPump(request)
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error(response.errorBody()?.string() ?: "Registration failed")
+            else {
+                val errorBody = response.errorBody()?.string()
+                val message = try {
+                    val json = org.json.JSONObject(errorBody ?: "")
+                    val error = json.optJSONObject("error")
+                    error?.optString("message") ?: json.optString("message", "Registration failed")
+                } catch (_: Exception) {
+                    errorBody ?: "Registration failed"
+                }
+                Resource.Error(message)
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }
@@ -60,9 +71,10 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun processPurchase(request: FuelPurchaseRequest): Resource<GenericResponse> {
+    suspend fun processPurchase(request: FuelPurchaseRequest, idempotencyKey: String = UUID.randomUUID().toString()): Resource<GenericResponse> {
         return try {
-            val response = api.fuelPurchase(request)
+            val req = request.copy(idempotencyKey = idempotencyKey)
+            val response = api.fuelPurchase(req)
             if (response.isSuccessful) Resource.Success(response.body()!!)
             else Resource.Error(response.errorBody()?.string() ?: "Purchase failed")
         } catch (e: Exception) {
@@ -70,9 +82,10 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun processPurchaseByVehicle(request: PurchaseByVehicleRequest): Resource<GenericResponse> {
+    suspend fun processPurchaseByVehicle(request: PurchaseByVehicleRequest, idempotencyKey: String = UUID.randomUUID().toString()): Resource<GenericResponse> {
         return try {
-            val response = api.fuelPurchaseByVehicle(request)
+            val req = request.copy(idempotencyKey = idempotencyKey)
+            val response = api.fuelPurchaseByVehicle(req)
             if (response.isSuccessful) Resource.Success(response.body()!!)
             else Resource.Error(response.errorBody()?.string() ?: "Purchase failed")
         } catch (e: Exception) {
@@ -80,7 +93,67 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun getSettings(pumpId: Int): Resource<GenericResponse> {
+    suspend fun getNearbyPumps(latitude: Double, longitude: Double, radiusKm: Double = 10.0): Resource<NearbyPumpsResponse> {
+        return try {
+            val response = api.getNearbyPumps(latitude, longitude, radiusKm)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load nearby pumps")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getFuelPrices(pumpId: Int): Resource<FuelPricesResponse> {
+        return try {
+            val response = api.getPumpFuelPrices(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load fuel prices")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getPumpShifts(pumpId: Int): Resource<ShiftsResponse> {
+        return try {
+            val response = api.getPumpShifts(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load shifts")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun startShift(pumpId: Int, shiftType: String = "morning"): Resource<GenericResponse> {
+        return try {
+            val response = api.startShift(pumpId, ShiftStartRequest(shiftType))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to start shift")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun endShift(pumpId: Int): Resource<GenericResponse> {
+        return try {
+            val response = api.endShift(pumpId, mapOf("notes" to ""))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to end shift")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getInventory(pumpId: Int): Resource<PumpInventoryResponse> {
+        return try {
+            val response = api.getPumpInventory(pumpId)
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else Resource.Error("Failed to load inventory")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun getSettings(pumpId: Int): Resource<PumpSettingsResponse> {
         return try {
             val response = api.getPumpSettings(pumpId)
             if (response.isSuccessful) Resource.Success(response.body()!!)
@@ -90,11 +163,48 @@ class PumpRepository @Inject constructor(
         }
     }
 
-    suspend fun saveSettings(body: Map<String, Any>): Resource<GenericResponse> {
+    suspend fun updatePump(
+        pumpId: Int,
+        pumpName: String,
+        address: String,
+        city: String,
+        state: String,
+        pincode: String,
+        phoneNumber: String,
+        email: String,
+    ): Resource<PumpResponse> {
         return try {
-            val response = api.savePumpSettings(body)
+            val response = api.updatePump(pumpId, mapOf(
+                "pump_name" to pumpName,
+                "address" to address,
+                "city" to city,
+                "state" to state,
+                "pincode" to pincode,
+                "phone_number" to phoneNumber,
+                "email" to email,
+            ))
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error("Failed to save settings")
+            else Resource.Error("Failed to update pump")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun saveSettings(pumpId: Int, fuelTypes: String, fuelRates: String, isOpen: Boolean): Resource<PumpSettingsResponse> {
+        return try {
+            val response = api.savePumpSettings(SaveSettingsRequest(pumpId, fuelTypes, fuelRates, isOpen))
+            if (response.isSuccessful) Resource.Success(response.body()!!)
+            else {
+                val errorBody = response.errorBody()?.string()
+                val message = try {
+                    val json = org.json.JSONObject(errorBody ?: "")
+                    val error = json.optJSONObject("error")
+                    error?.optString("message") ?: json.optString("message", "Failed to save settings")
+                } catch (_: Exception) {
+                    errorBody ?: "Failed to save settings"
+                }
+                Resource.Error(message)
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }

@@ -24,10 +24,10 @@ interface ZapPayApi {
 
     // ── Profile ────────────────────────────────────────────────────────
     @GET("users/profile")
-    suspend fun getProfile(): Response<GenericResponse>
+    suspend fun getProfile(): Response<UserProfileDto>
 
     @PUT("users/profile")
-    suspend fun updateProfile(@Body body: Map<String, String>): Response<GenericResponse>
+    suspend fun updateProfile(@Body body: Map<String, String>): Response<UserProfileDto>
 
     @POST("users/kyc/submit")
     suspend fun submitKYC(@Body body: Map<String, String>): Response<GenericResponse>
@@ -65,6 +65,9 @@ interface ZapPayApi {
     @GET("transactions/{id}")
     suspend fun getTransactionDetails(@Path("id") id: String): Response<TransactionDto>
 
+    @GET("transactions/{id}/receipt")
+    suspend fun getTransactionReceipt(@Path("id") id: String): Response<ReceiptDto>
+
     // ── Pumps ──────────────────────────────────────────────────────────
     @GET("pumps")
     suspend fun getPumps(
@@ -74,6 +77,9 @@ interface ZapPayApi {
 
     @GET("pumps/my-pump")
     suspend fun getMyPump(): Response<PumpResponse>
+
+    @PUT("pumps/{pump_id}")
+    suspend fun updatePump(@Path("pump_id") pumpId: Int, @Body body: Map<String, String>): Response<PumpResponse>
 
     @POST("pumps/register")
     suspend fun registerPump(@Body request: PumpRegisterRequest): Response<GenericResponse>
@@ -98,10 +104,62 @@ interface ZapPayApi {
     suspend fun fuelPurchaseByVehicle(@Body request: PurchaseByVehicleRequest): Response<GenericResponse>
 
     @GET("settings/{pump_id}")
-    suspend fun getPumpSettings(@Path("pump_id") pumpId: Int): Response<GenericResponse>
+    suspend fun getPumpSettings(@Path("pump_id") pumpId: Int): Response<PumpSettingsResponse>
 
     @POST("settings/save")
-    suspend fun savePumpSettings(@Body body: Map<String, Any>): Response<GenericResponse>
+    suspend fun savePumpSettings(@Body body: SaveSettingsRequest): Response<PumpSettingsResponse>
+
+    // ── Phase 4: Nearby Pumps ──
+    @GET("pumps/nearby")
+    suspend fun getNearbyPumps(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("radius_km") radiusKm: Double = 10.0,
+    ): Response<NearbyPumpsResponse>
+
+    @GET("pumps/{id}/fuel-prices")
+    suspend fun getPumpFuelPrices(@Path("id") pumpId: Int): Response<FuelPricesResponse>
+
+    // ── Phase 4: Inventory ──
+    @GET("pumps/{id}/inventory")
+    suspend fun getPumpInventory(@Path("id") pumpId: Int): Response<PumpInventoryResponse>
+
+    // ── Phase 4: Shifts ──
+    @POST("pumps/{id}/shifts/start")
+    suspend fun startShift(@Path("id") pumpId: Int, @Body body: ShiftStartRequest): Response<GenericResponse>
+
+    @POST("pumps/{id}/shifts/end")
+    suspend fun endShift(@Path("id") pumpId: Int, @Body body: Map<String, String>): Response<GenericResponse>
+
+    @GET("pumps/{id}/shifts")
+    suspend fun getPumpShifts(@Path("id") pumpId: Int): Response<ShiftsResponse>
+
+    // ── Multi-Vehicle ──
+    @GET("users/vehicles")
+    suspend fun getMyVehicles(): Response<List<VehicleDto>>
+
+    @POST("users/vehicles")
+    suspend fun addVehicle(@Body body: VehicleAddRequest): Response<GenericResponse>
+
+    @PUT("users/vehicles/{id}")
+    suspend fun updateVehicle(@Path("id") vehicleId: Int, @Body body: VehicleUpdateRequest): Response<GenericResponse>
+
+    @DELETE("users/vehicles/{id}")
+    suspend fun removeVehicle(@Path("id") vehicleId: Int): Response<GenericResponse>
+
+    // ── Notifications ──
+    @GET("users/notifications")
+    suspend fun getMyNotifications(): Response<NotificationsResponse>
+
+    @POST("users/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") notifId: Int): Response<GenericResponse>
+
+    // ── Support Tickets ──
+    @POST("users/support-tickets")
+    suspend fun createSupportTicket(@Body body: TicketCreateRequest): Response<GenericResponse>
+
+    @GET("users/support-tickets")
+    suspend fun getMySupportTickets(): Response<TicketsResponse>
 
     // ── Health ─────────────────────────────────────────────────────────
     @GET("../health")

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    clear_db_secret: str = ""
     jwt_issuer: str = "zappay-api"
     jwt_audience: Optional[str] = None
 
@@ -100,7 +101,14 @@ class Settings(BaseSettings):
 
         from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-        parsed = urlparse(self.database_url)
+        url = self.database_url
+
+        # SQLite URLs don't need SSL and urlunparse mangles them.
+        # Return them unchanged.
+        if url.startswith("sqlite"):
+            return url
+
+        parsed = urlparse(url)
         qs = parse_qs(parsed.query, keep_blank_values=True)
 
         if self.is_supabase and "sslmode" not in qs:

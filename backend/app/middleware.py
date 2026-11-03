@@ -28,53 +28,77 @@ async def _safe_call_next(request: Request, call_next: Callable) -> Response:
         )
 
 
+def _set_header(response: Response, key: str, value: str) -> None:
+    if response is not None:
+        try:
+            response.headers[key] = value
+        except Exception:
+            pass
+
+
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-        request.state.request_id = request_id
-        response = await _safe_call_next(request, call_next)
-        response.headers["X-Request-ID"] = request_id
-        return response
+        try:
+            request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+            request.state.request_id = request_id
+            response = await _safe_call_next(request, call_next)
+            _set_header(response, "X-Request-ID", request_id)
+            return response
+        except Exception as exc:
+            logger.warning("RequestIDMiddleware failed: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        start = time.perf_counter()
-        response = await _safe_call_next(request, call_next)
-        elapsed = time.perf_counter() - start
-        response.headers["X-Response-Time-Ms"] = str(int(elapsed * 1000))
-        if settings.debug or elapsed > 1.0:
-            logger.info(
-                "TIMING  method=%s path=%s status=%d duration=%.3fs",
-                request.method,
-                request.url.path,
-                response.status_code,
-                elapsed,
-            )
-        return response
+        try:
+            start = time.perf_counter()
+            response = await _safe_call_next(request, call_next)
+            elapsed = time.perf_counter() - start
+            _set_header(response, "X-Response-Time-Ms", str(int(elapsed * 1000)))
+            if settings.debug or elapsed > 1.0:
+                logger.info(
+                    "TIMING  method=%s path=%s status=%d duration=%.3fs",
+                    request.method,
+                    request.url.path,
+                    response.status_code,
+                    elapsed,
+                )
+            return response
+        except Exception as exc:
+            logger.warning("RequestTimingMiddleware failed: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        request_id = getattr(request.state, "request_id", "-")
-        logger.info("REQ  [%s] %s %s", request_id, request.method, request.url.path)
-        response = await _safe_call_next(request, call_next)
-        logger.info(
-            "RESP [%s] %s %s -> %d", request_id, request.method, request.url.path, response.status_code,
-        )
-        return response
+        try:
+            request_id = getattr(request.state, "request_id", "-")
+            logger.info("REQ  [%s] %s %s", request_id, request.method, request.url.path)
+            response = await _safe_call_next(request, call_next)
+            logger.info(
+                "RESP [%s] %s %s -> %d", request_id, request.method, request.url.path, response.status_code,
+            )
+            return response
+        except Exception as exc:
+            logger.warning("RequestLoggingMiddleware failed: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await _safe_call_next(request, call_next)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        return response
+        try:
+            response = await _safe_call_next(request, call_next)
+            _set_header(response, "X-Content-Type-Options", "nosniff")
+            _set_header(response, "X-Frame-Options", "DENY")
+            _set_header(response, "X-XSS-Protection", "1; mode=block")
+            _set_header(response, "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+            _set_header(response, "Cache-Control", "no-store")
+            _set_header(response, "Referrer-Policy", "strict-origin-when-cross-origin")
+            return response
+        except Exception as exc:
+            logger.warning("SecurityHeadersMiddleware failed: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -83,25 +107,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._requests: dict = {}
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        if not settings.rate_limit_enabled:
+        try:
+            if not settings.rate_limit_enabled:
+                return await _safe_call_next(request, call_next)
+
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            window = settings.rate_limit_window_seconds
+            limit = settings.rate_limit_requests
+
+            if client_ip not in self._requests:
+                self._requests[client_ip] = []
+
+            self._requests[client_ip] = [t for t in self._requests[client_ip] if t > now - window]
+            self._requests[client_ip].append(now)
+
+            if len(self._requests[client_ip]) > limit:
+                logger.warning("Rate limit exceeded for %s", client_ip)
+                raise RateLimitException()
+
             return await _safe_call_next(request, call_next)
-
-        client_ip = request.client.host if request.client else "unknown"
-        now = time.time()
-        window = settings.rate_limit_window_seconds
-        limit = settings.rate_limit_requests
-
-        if client_ip not in self._requests:
-            self._requests[client_ip] = []
-
-        self._requests[client_ip] = [t for t in self._requests[client_ip] if t > now - window]
-        self._requests[client_ip].append(now)
-
-        if len(self._requests[client_ip]) > limit:
-            logger.warning("Rate limit exceeded for %s", client_ip)
-            raise RateLimitException()
-
-        return await _safe_call_next(request, call_next)
+        except Exception as exc:
+            logger.warning("RateLimitMiddleware failed: %s", exc)
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 def register_middleware(app: FastAPI) -> None:

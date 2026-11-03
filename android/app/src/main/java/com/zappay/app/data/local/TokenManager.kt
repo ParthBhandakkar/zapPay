@@ -6,6 +6,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.zappay.app.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.GeneralSecurityException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,16 +15,20 @@ class TokenManager @Inject constructor(
     @ApplicationContext context: Context,
 ) {
     private val prefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "zappay_secure_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                "zappay_secure_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (_: GeneralSecurityException) {
+            context.getSharedPreferences("zappay_prefs", Context.MODE_PRIVATE)
+        }
     }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
@@ -55,4 +60,14 @@ class TokenManager @Inject constructor(
     suspend fun getUserPhone(): String? = prefs.getString(Constants.USER_PHONE_KEY, null)
 
     suspend fun isLoggedIn(): Boolean = getAccessToken() != null
+
+    suspend fun saveVehicleInfo(vehicleNumber: String, vehicleType: String) {
+        prefs.edit()
+            .putString("vehicle_number", vehicleNumber)
+            .putString("vehicle_type", vehicleType)
+            .apply()
+    }
+
+    suspend fun getVehicleNumber(): String? = prefs.getString("vehicle_number", null)
+    suspend fun getVehicleType(): String? = prefs.getString("vehicle_type", null)
 }

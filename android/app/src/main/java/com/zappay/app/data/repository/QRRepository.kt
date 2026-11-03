@@ -22,9 +22,9 @@ class QRRepository @Inject constructor(
         }
     }
 
-    suspend fun generateQR(qrType: String = "mobile"): Resource<QRCodeResponse> {
+    suspend fun generateQR(qrType: String = "mobile", vehicleId: Int? = null): Resource<QRCodeResponse> {
         return try {
-            val response = api.generateQR(QRCodeGenerateRequest(qrType))
+            val response = api.generateQR(QRCodeGenerateRequest(qrType, vehicleId))
             if (response.isSuccessful) Resource.Success(response.body()!!)
             else Resource.Error("Failed to generate QR")
         } catch (e: Exception) {

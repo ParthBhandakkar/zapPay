@@ -41,13 +41,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun login(phone: String, password: String) {
+    fun login(phone: String, password: String, role: String = "customer") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = authRepository.login(phone, password)) {
                 is Resource.Success -> {
-                    authRepository.saveUserInfo(0, "", "", phone)
-                    val role = authRepository.getUserRole() ?: "customer"
+                    authRepository.saveUserInfo(0, role, "", phone)
                     _uiState.value = AuthUiState(isLoggedIn = true, userRole = role)
                 }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
@@ -73,13 +72,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun loginWithOTP(phone: String, otp: String) {
+    fun loginWithOTP(phone: String, otp: String, role: String = "customer") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = authRepository.loginWithOTP(phone, otp)) {
                 is Resource.Success -> {
-                    authRepository.saveUserInfo(0, "", "", phone)
-                    val role = authRepository.getUserRole() ?: "customer"
+                    authRepository.saveUserInfo(0, role, "", phone)
                     _uiState.value = AuthUiState(isLoggedIn = true, userRole = role)
                 }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
@@ -93,7 +91,7 @@ class AuthViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = authRepository.register(phone, name, password, role, null)) {
                 is Resource.Success -> {
-                    login(phone, password)
+                    login(phone, password, role)
                 }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
                 is Resource.Loading -> {}

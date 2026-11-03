@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db, get_redis
 from app.exceptions import NotFoundException, UnauthorizedException
-from app.models import User, UserRole, PetrolPump
+from app.models import User, UserRole, PetrolPump, UserVehicle
 from app.schemas import BaseResponse, FuelPurchaseRequest
 from app.services.auth import verify_token
 from app.services.payment import process_fuel_purchase, process_fuel_purchase_by_user
@@ -26,6 +26,51 @@ logger = logging.getLogger("zappay.routers.pump_ops")
 
 router = APIRouter(prefix="/api/v1", tags=["pump-ops"])
 security = HTTPBearer(auto_error=False)
+
+DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "CNG"]
+DEFAULT_FUEL_RATES = ["104.50", "92.30", "78.00"]
+
+
+def _split_csv(value, fallback=None):
+    if value is None:
+        return fallback or []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _normalize_pump_settings(pump_id: int, data: Optional[dict] = None) -> dict:
+    data = data or {}
+    fuel_types = _split_csv(data.get("fuel_types"), DEFAULT_FUEL_TYPES)
+    fuel_rates = _split_csv(data.get("fuel_rates"), DEFAULT_FUEL_RATES)
+
+    if "petrol_price" in data and not data.get("fuel_rates"):
+        fuel_types = ["Petrol", "Diesel"]
+        fuel_rates = [str(data.get("petrol_price") or "0"), str(data.get("diesel_price") or "0")]
+
+    while len(fuel_rates) < len(fuel_types):
+        fuel_rates.append("0")
+
+    is_open_raw = data.get("is_open", True)
+    if isinstance(is_open_raw, str):
+        is_open = is_open_raw.lower() not in {"false", "0", "no", "closed"}
+    else:
+        is_open = bool(is_open_raw)
+
+    settings_data = {
+        "pump_id": pump_id,
+        "pump_name": str(data.get("pump_name") or ""),
+        "fuel_types": ",".join(fuel_types),
+        "fuel_rates": ",".join(fuel_rates[:len(fuel_types)]),
+        "is_open": is_open,
+        "petrol_price": fuel_rates[0] if fuel_rates else "0",
+        "diesel_price": fuel_rates[1] if len(fuel_rates) > 1 else "0",
+    }
+
+    if len(fuel_rates) > 2:
+        settings_data["cng_price"] = fuel_rates[2]
+
+    return settings_data
 
 
 def require_pump_operator(db: Session, credentials: Optional[HTTPAuthorizationCredentials]) -> User:
@@ -87,6 +132,7 @@ async def lookup_vehicle(
     normalized = vehicle_number.upper().replace(" ", "").replace("-", "")
     logger.info("Looking up vehicle: %s -> %s", vehicle_number, normalized)
 
+    # Search in User.vehicle_number (primary vehicle)
     users = db.query(User).filter(
         User.vehicle_number.isnot(None),
         User.is_active == True,
@@ -99,6 +145,18 @@ async def lookup_vehicle(
             if un == normalized:
                 matched = u
                 break
+
+    # If not found, search in UserVehicle table (additional vehicles)
+    if not matched:
+        user_vehicle = db.query(UserVehicle).filter(
+            UserVehicle.is_active == True,
+        ).all()
+        for uv in user_vehicle:
+            if uv.vehicle_number:
+                uv_norm = uv.vehicle_number.upper().replace(" ", "").replace("-", "")
+                if uv_norm == normalized:
+                    matched = db.query(User).filter(User.id == uv.user_id, User.is_active == True).first()
+                    break
 
     if not matched:
         return {"found": False, "message": "No user found with this vehicle number"}
@@ -211,30 +269,6 @@ async def validate_qr(
     }
 
 
-@router.post("/transactions/fuel-purchase")
-async def purchase_fuel(
-    purchase_data: FuelPurchaseRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-):
-    operator = require_pump_operator(db, credentials)
-    logger.info(
-        "Fuel purchase: pump=%d operator=%s fuel=%s qty=%.1f rate=%.2f",
-        purchase_data.pump_id, operator.full_name,
-        purchase_data.fuel_type, purchase_data.fuel_quantity, purchase_data.fuel_rate,
-    )
-    result = process_fuel_purchase(
-        db=db,
-        qr_code=purchase_data.qr_code,
-        pump_id=purchase_data.pump_id,
-        fuel_type=purchase_data.fuel_type,
-        fuel_quantity=purchase_data.fuel_quantity,
-        fuel_rate=purchase_data.fuel_rate,
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["message"])
-    return BaseResponse(success=True, message=result["message"], data=result)
-
 
 @router.post("/transactions/fuel-purchase-by-vehicle")
 async def purchase_fuel_by_vehicle(
@@ -249,6 +283,7 @@ async def purchase_fuel_by_vehicle(
     fuel_type = body.get("fuel_type")
     fuel_quantity = body.get("fuel_quantity")
     fuel_rate = body.get("fuel_rate")
+    idempotency_key = body.get("idempotency_key")
 
     if not all([user_id, pump_id, fuel_type, fuel_quantity, fuel_rate]):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -260,23 +295,11 @@ async def purchase_fuel_by_vehicle(
         fuel_type=fuel_type,
         fuel_quantity=float(fuel_quantity),
         fuel_rate=float(fuel_rate),
+        idempotency_key=idempotency_key,
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return BaseResponse(success=True, message=result["message"], data=result)
-
-
-@router.get("/pumps/{pump_id}")
-async def get_pump_details(
-    pump_id: int,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-):
-    require_pump_operator(db, credentials)
-    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
-    if not pump:
-        raise NotFoundException("Pump")
-    return pump
 
 
 @router.get("/operators/profile")
@@ -297,24 +320,31 @@ async def save_pump_settings(
     pump_id = payload.get("pump_id")
     if not pump_id:
         raise HTTPException(status_code=400, detail="pump_id required")
+    pump_id = int(pump_id)
 
-    pump_name = str(payload.get("pump_name") or "")
-    petrol_price = str(payload.get("petrol_price") or "0")
-    diesel_price = str(payload.get("diesel_price") or "0")
+    data = _normalize_pump_settings(pump_id, payload)
 
+    # Persist to DB
+    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
+    if pump:
+        pump.fuel_types = data.get("fuel_types", pump.fuel_types)
+        pump.fuel_rates = data.get("fuel_rates", pump.fuel_rates)
+        pump.is_open = data.get("is_open", pump.is_open)
+        db.commit()
+
+    # Cache in Redis
     try:
         r = get_redis()
         key = f"pump_settings:{pump_id}"
-        r.hset(key, "pump_name", pump_name)
-        r.hset(key, "petrol_price", petrol_price)
-        r.hset(key, "diesel_price", diesel_price)
+        r.delete(key)
+        r.hset(key, mapping={field: str(value) for field, value in data.items()})
     except Exception as e:
         logger.warning("Redis unavailable for pump settings: %s", e)
 
     return {
         "success": True,
         "message": "Settings saved",
-        "data": {"pump_id": pump_id, "pump_name": pump_name, "petrol_price": petrol_price, "diesel_price": diesel_price},
+        "data": data,
     }
 
 
@@ -325,16 +355,45 @@ async def get_pump_settings(
     db: Session = Depends(get_db),
 ):
     require_pump_operator(db, credentials)
+
+    # Try Redis cache first
     try:
         r = get_redis()
         key = f"pump_settings:{pump_id}"
-        data = r.hgetall(key) or {}
-        return {
-            "pump_id": pump_id,
-            "pump_name": data.get("pump_name", ""),
-            "petrol_price": data.get("petrol_price", "0"),
-            "diesel_price": data.get("diesel_price", "0"),
-        }
+        cached = r.hgetall(key)
+        if cached:
+            return {
+                "success": True,
+                "message": "Settings loaded",
+                "data": _normalize_pump_settings(pump_id, cached),
+            }
     except Exception as e:
-        logger.warning("Redis unavailable for pump settings: %s", e)
-        return {"pump_id": pump_id, "pump_name": "", "petrol_price": "0", "diesel_price": "0"}
+        logger.warning("Redis unavailable: %s", e)
+
+    # Fallback to DB
+    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
+    if pump:
+        db_data = {
+            "fuel_types": pump.fuel_types or "",
+            "fuel_rates": pump.fuel_rates or "",
+            "is_open": pump.is_open if pump.is_open is not None else True,
+        }
+        # Re-populate Redis
+        normalized = _normalize_pump_settings(pump_id, db_data)
+        try:
+            r = get_redis()
+            key = f"pump_settings:{pump_id}"
+            r.hset(key, mapping={field: str(value) for field, value in normalized.items()})
+        except Exception:
+            pass
+        return {
+            "success": True,
+            "message": "Settings loaded",
+            "data": normalized,
+        }
+
+    return {
+        "success": True,
+        "message": "Settings loaded (from defaults)",
+        "data": _normalize_pump_settings(pump_id),
+    }

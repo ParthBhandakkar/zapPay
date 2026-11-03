@@ -34,6 +34,12 @@ data class PumpUiState(
     // Purchase
     val purchaseSuccess: Boolean = false,
     val purchaseMessage: String? = null,
+    val purchaseCustomerName: String? = null,
+    val purchaseCustomerPhone: String? = null,
+    val purchaseVehicleNumber: String? = null,
+    val purchaseFuelType: String? = null,
+    val purchaseFuelQuantity: Double? = null,
+    val purchaseFuelRate: Double? = null,
 
     // ZapPay 2.0 Forecourt Ecosystem
     val forecourtVerifiedVehicle: ScanVehicleApiResponse? = null,
@@ -43,10 +49,14 @@ data class PumpUiState(
     val shiftSummary: ShiftSummaryApiResponse? = null,
 
     // Settings
-    val settings: Map<String, Any> = emptyMap(),
+    val settings: PumpSettingsData? = null,
+    val settingsSaved: Boolean = false,
 
     // Pump registration
     val registrationSuccess: Boolean = false,
+
+    // My pump details
+    val myPump: PumpResponse? = null,
 )
 
 @HiltViewModel
@@ -89,7 +99,7 @@ class PumpViewModel @Inject constructor(
                     totalRevenue = d.totalRevenue,
                     transactionsToday = d.transactionsToday,
                     revenueToday = d.revenueToday,
-                    recentTransactions = d.recentTransactions,
+                    recentTransactions = d.recentTransactions ?: emptyList(),
                 )
             }
             is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
@@ -131,6 +141,8 @@ class PumpViewModel @Inject constructor(
         fuelRate: Double,
     ) {
         val pumpId = _uiState.value.pumpId ?: return
+        val customer = _uiState.value.scannedCustomer
+        val vehicle = _uiState.value.lookedUpVehicle
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val result = if (qrCode != null) {
@@ -150,6 +162,12 @@ class PumpViewModel @Inject constructor(
                         isLoading = false,
                         purchaseSuccess = true,
                         purchaseMessage = result.data.message,
+                        purchaseCustomerName = customer?.userName ?: vehicle?.userName,
+                        purchaseCustomerPhone = customer?.userPhone ?: vehicle?.userPhone,
+                        purchaseVehicleNumber = customer?.vehicleNumber ?: vehicle?.vehicleNumber,
+                        purchaseFuelType = fuelType,
+                        purchaseFuelQuantity = fuelQuantity,
+                        purchaseFuelRate = fuelRate,
                     )
                     loadDashboard()
                 }
@@ -173,12 +191,25 @@ class PumpViewModel @Inject constructor(
     }
 
     fun loadSettings() {
-        val pumpId = _uiState.value.pumpId ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = pumpRepository.getSettings(pumpId)) {
+            var pumpId = _uiState.value.pumpId
+            if (pumpId == null) {
+                when (val result = pumpRepository.getMyPump()) {
+                    is Resource.Success -> {
+                        pumpId = result.data.id
+                        _uiState.value = _uiState.value.copy(pumpId = pumpId)
+                    }
+                    is Resource.Error -> {
+                        _uiState.value = _uiState.value.copy(error = result.message)
+                        return@launch
+                    }
+                    else -> return@launch
+                }
+            }
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, settingsSaved = false)
+            when (val result = pumpRepository.getSettings(pumpId!!)) {
                 is Resource.Success -> {
-                    _uiState.value = _uiState.value.copy(isLoading = false, settings = result.data.data ?: emptyMap())
+                    _uiState.value = _uiState.value.copy(isLoading = false, settings = result.data.data)
                 }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
                 else -> {}
@@ -186,11 +217,29 @@ class PumpViewModel @Inject constructor(
         }
     }
 
-    fun saveSettings(body: Map<String, Any>) {
+    fun saveSettings(fuelTypes: String, fuelRates: String, isOpen: Boolean) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = pumpRepository.saveSettings(body)) {
-                is Resource.Success -> _uiState.value = _uiState.value.copy(isLoading = false)
+            var pumpId = _uiState.value.pumpId
+            if (pumpId == null) {
+                when (val result = pumpRepository.getMyPump()) {
+                    is Resource.Success -> {
+                        pumpId = result.data.id
+                        _uiState.value = _uiState.value.copy(pumpId = pumpId)
+                    }
+                    is Resource.Error -> {
+                        _uiState.value = _uiState.value.copy(error = result.message)
+                        return@launch
+                    }
+                    else -> return@launch
+                }
+            }
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, settingsSaved = false)
+            when (val result = pumpRepository.saveSettings(pumpId!!, fuelTypes, fuelRates, isOpen)) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    settings = result.data.data,
+                    settingsSaved = true,
+                )
                 is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
                 else -> {}
             }
@@ -198,11 +247,24 @@ class PumpViewModel @Inject constructor(
     }
 
     fun clearPurchaseSuccess() {
-        _uiState.value = _uiState.value.copy(purchaseSuccess = false, purchaseMessage = null)
+        _uiState.value = _uiState.value.copy(
+            purchaseSuccess = false,
+            purchaseMessage = null,
+            purchaseCustomerName = null,
+            purchaseCustomerPhone = null,
+            purchaseVehicleNumber = null,
+            purchaseFuelType = null,
+            purchaseFuelQuantity = null,
+            purchaseFuelRate = null,
+        )
     }
 
     fun clearRegistrationSuccess() {
         _uiState.value = _uiState.value.copy(registrationSuccess = false)
+    }
+
+    fun clearSettingsSaved() {
+        _uiState.value = _uiState.value.copy(settingsSaved = false)
     }
 
     fun clearScannedCustomer() {
@@ -211,6 +273,45 @@ class PumpViewModel @Inject constructor(
 
     fun clearLookedUpVehicle() {
         _uiState.value = _uiState.value.copy(lookedUpVehicle = null)
+    }
+
+    fun loadMyPump() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.getMyPump()) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    myPump = result.data,
+                    pumpId = result.data.id,
+                )
+                is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+                else -> {}
+            }
+        }
+    }
+
+    fun updatePump(
+        pumpId: Int,
+        pumpName: String,
+        address: String,
+        city: String,
+        state: String,
+        pincode: String,
+        phoneNumber: String,
+        email: String,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            when (val result = pumpRepository.updatePump(
+                pumpId, pumpName, address, city, state, pincode, phoneNumber, email
+            )) {
+                is Resource.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false, myPump = result.data)
+                }
+                is Resource.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+                else -> {}
+            }
+        }
     }
 
     fun clearError() {
