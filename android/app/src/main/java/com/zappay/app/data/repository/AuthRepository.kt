@@ -12,15 +12,35 @@ class AuthRepository @Inject constructor(
     private val api: ZapPayApi,
     private val tokenManager: TokenManager,
 ) {
+    private fun parseErrorMessage(errorBody: String?, fallback: String): String {
+        if (errorBody.isNullOrBlank()) return fallback
+        return try {
+            val json = org.json.JSONObject(errorBody)
+            if (json.has("detail")) {
+                val detail = json.get("detail")
+                if (detail is String) return detail
+            }
+            if (json.has("error")) {
+                val err = json.optJSONObject("error")
+                if (err != null && err.has("message")) return err.getString("message")
+            }
+            if (json.has("message")) json.getString("message")
+            else fallback
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+
     suspend fun login(username: String, password: String): Resource<TokenResponse> {
         return try {
-            val response = api.login(LoginRequest(username, password))
+            val normalizedPhone = if (username.length == 10 && !username.startsWith("+")) "+91$username" else username.trim()
+            val response = api.login(LoginRequest(normalizedPhone, password))
             if (response.isSuccessful) {
                 val body = response.body()!!
                 tokenManager.saveTokens(body.accessToken, body.refreshToken)
                 Resource.Success(body)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "Login failed")
+                Resource.Error(parseErrorMessage(response.errorBody()?.string(), "Login failed"))
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
@@ -31,9 +51,10 @@ class AuthRepository @Inject constructor(
         phone: String, name: String, password: String, role: String, email: String?,
     ): Resource<GenericResponse> {
         return try {
-            val response = api.register(RegisterRequest(phone, name, password, password, role, email))
+            val normalizedPhone = if (phone.length == 10 && !phone.startsWith("+")) "+91$phone" else phone.trim()
+            val response = api.register(RegisterRequest(normalizedPhone, name, password, password, role, email))
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error(response.errorBody()?.string() ?: "Registration failed")
+            else Resource.Error(parseErrorMessage(response.errorBody()?.string(), "Registration failed"))
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }
@@ -41,9 +62,10 @@ class AuthRepository @Inject constructor(
 
     suspend fun sendOTP(phone: String): Resource<GenericResponse> {
         return try {
-            val response = api.sendOTP(OTPRequest(phone))
+            val normalizedPhone = if (phone.length == 10 && !phone.startsWith("+")) "+91$phone" else phone.trim()
+            val response = api.sendOTP(OTPRequest(normalizedPhone))
             if (response.isSuccessful) Resource.Success(response.body()!!)
-            else Resource.Error(response.errorBody()?.string() ?: "Failed to send OTP")
+            else Resource.Error(parseErrorMessage(response.errorBody()?.string(), "Failed to send OTP"))
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
         }
@@ -51,13 +73,14 @@ class AuthRepository @Inject constructor(
 
     suspend fun loginWithOTP(phone: String, otp: String): Resource<TokenResponse> {
         return try {
-            val response = api.loginWithOTP(OTPVerifyRequest(phone, otp))
+            val normalizedPhone = if (phone.length == 10 && !phone.startsWith("+")) "+91$phone" else phone.trim()
+            val response = api.loginWithOTP(OTPVerifyRequest(normalizedPhone, otp))
             if (response.isSuccessful) {
                 val body = response.body()!!
                 tokenManager.saveTokens(body.accessToken, body.refreshToken)
                 Resource.Success(body)
             } else {
-                Resource.Error(response.errorBody()?.string() ?: "OTP verification failed")
+                Resource.Error(parseErrorMessage(response.errorBody()?.string(), "OTP verification failed"))
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Network error")
