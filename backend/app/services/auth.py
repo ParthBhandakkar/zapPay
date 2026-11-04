@@ -92,9 +92,35 @@ def verify_refresh_token(token: str, credentials_exception) -> TokenData:
         raise credentials_exception
 
 
+def normalize_phone(phone_number: str) -> str:
+    clean = phone_number.strip().replace(" ", "").replace("-", "")
+    if clean.startswith("+91"):
+        return clean
+    if clean.startswith("91") and len(clean) == 12:
+        return f"+{clean}"
+    if len(clean) == 10:
+        return f"+91{clean}"
+    return clean
+
+
+def normalize_phone_variants(phone_number: str) -> list:
+    clean = phone_number.strip().replace(" ", "").replace("-", "")
+    variants = {clean}
+    if clean.startswith("+91"):
+        variants.add(clean[3:])
+        variants.add(clean[1:])
+    elif clean.startswith("91") and len(clean) == 12:
+        variants.add(f"+{clean}")
+        variants.add(clean[2:])
+    elif len(clean) == 10:
+        variants.add(f"+91{clean}")
+        variants.add(f"91{clean}")
+    return list(variants)
+
+
 def authenticate_user(db: Session, phone_number: str, password: str) -> Optional[User]:
-    clean_phone = phone_number.replace(" ", "").replace("-", "")
-    user = db.query(User).filter(User.phone_number == clean_phone).first()
+    variants = normalize_phone_variants(phone_number)
+    user = db.query(User).filter(User.phone_number.in_(variants)).first()
     if not user or not verify_password(password, user.password_hash):
         return None
     return user
@@ -105,23 +131,26 @@ def generate_otp() -> str:
 
 
 def create_otp(db: Session, phone_number: str, otp_type: str = "login") -> str:
+    variants = normalize_phone_variants(phone_number)
     db.query(OTP).filter(
-        OTP.phone_number == phone_number,
+        OTP.phone_number.in_(variants),
         OTP.otp_type == otp_type,
         OTP.is_used == False,
-    ).delete()
+    ).delete(synchronize_session=False)
 
+    canonical_phone = normalize_phone(phone_number)
     otp_code = generate_otp()
     expires_at = datetime.utcnow() + timedelta(minutes=10)
-    otp_record = OTP(phone_number=phone_number, otp_code=otp_code, otp_type=otp_type, expires_at=expires_at)
+    otp_record = OTP(phone_number=canonical_phone, otp_code=otp_code, otp_type=otp_type, expires_at=expires_at)
     db.add(otp_record)
     db.commit()
     return otp_code
 
 
 def verify_otp(db: Session, phone_number: str, otp_code: str, otp_type: str = "login") -> bool:
+    variants = normalize_phone_variants(phone_number)
     otp_record = db.query(OTP).filter(
-        OTP.phone_number == phone_number,
+        OTP.phone_number.in_(variants),
         OTP.otp_code == otp_code,
         OTP.otp_type == otp_type,
         OTP.is_used == False,

@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 
 from app.database import get_db
 from app.schemas import UserCreate, UserLogin, Token, OTPRequest, OTPVerify, RegisterOTPStart, RegisterOTPComplete
 from app.services.auth import (
 	authenticate_user, get_password_hash, create_access_token, create_refresh_token,
-	create_otp, verify_otp
+	create_otp, verify_otp, normalize_phone, normalize_phone_variants
 )
 from app.services.notifications import send_otp_sms, send_email
 from app.models import User, UserRole
@@ -18,11 +17,10 @@ router = APIRouter()
 
 @router.post("/register")
 async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-	# Normalize phone number (remove spaces, dashes)
-	clean_phone = payload.phone_number.replace(" ", "").replace("-", "")
+	variants = normalize_phone_variants(payload.phone_number)
 	
 	# Check phone
-	existing_phone = db.query(User).filter(User.phone_number == clean_phone).first()
+	existing_phone = db.query(User).filter(User.phone_number.in_(variants)).first()
 	if existing_phone:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered")
 	
@@ -32,8 +30,9 @@ async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
 		if existing_email:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+	canonical_phone = normalize_phone(payload.phone_number)
 	user = User(
-		phone_number=clean_phone,
+		phone_number=canonical_phone,
 		email=payload.email,
 		full_name=payload.full_name,
 		password_hash=get_password_hash(payload.password),
@@ -49,8 +48,34 @@ async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
 	return {"success": True, "message": "Registration successful", "data": {"user_id": user.id}}
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-	user = authenticate_user(db, form_data.username, form_data.password)
+async def login(request: Request, db: Session = Depends(get_db)):
+	username = None
+	password = None
+	content_type = request.headers.get("content-type", "")
+
+	if "application/json" in content_type:
+		try:
+			body = await request.json()
+			username = body.get("username") or body.get("phone_number") or body.get("phone")
+			password = body.get("password")
+		except Exception:
+			pass
+
+	if not username or not password:
+		try:
+			form = await request.form()
+			username = form.get("username") or form.get("phone_number") or username
+			password = form.get("password") or password
+		except Exception:
+			pass
+
+	if not username or not password:
+		raise HTTPException(
+			status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+			detail="Phone number (username) and password are required"
+		)
+
+	user = authenticate_user(db, str(username), str(password))
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 	expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -60,9 +85,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 @router.post("/send-otp")
 async def send_otp_endpoint(payload: OTPRequest, db: Session = Depends(get_db)):
+	variants = normalize_phone_variants(payload.phone_number)
 	# If this is a login OTP, check if user exists first
 	if payload.otp_type == "login":
-		user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+		user = db.query(User).filter(User.phone_number.in_(variants)).first()
 		if not user:
 			raise HTTPException(
 				status_code=status.HTTP_404_NOT_FOUND, 
@@ -73,7 +99,7 @@ async def send_otp_endpoint(payload: OTPRequest, db: Session = Depends(get_db)):
 	await send_otp_sms(payload.phone_number, otp_code)
 	
 	# Send to email if user exists
-	user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+	user = db.query(User).filter(User.phone_number.in_(variants)).first()
 	if user and user.email:
 		await send_email(
 			user.email, 
@@ -90,7 +116,8 @@ async def send_otp_endpoint(payload: OTPRequest, db: Session = Depends(get_db)):
 async def login_with_otp(payload: OTPVerify, db: Session = Depends(get_db)):
 	if not verify_otp(db, payload.phone_number, payload.otp_code, payload.otp_type):
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired OTP")
-	user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+	variants = normalize_phone_variants(payload.phone_number)
+	user = db.query(User).filter(User.phone_number.in_(variants)).first()
 	if not user:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 	expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -101,7 +128,8 @@ async def login_with_otp(payload: OTPVerify, db: Session = Depends(get_db)):
 @router.post("/register/otp/start")
 async def register_otp_start(payload: RegisterOTPStart, db: Session = Depends(get_db)):
 	# If user already exists, block or allow login via OTP
-	existing = db.query(User).filter(User.phone_number == payload.phone_number).first()
+	variants = normalize_phone_variants(payload.phone_number)
+	existing = db.query(User).filter(User.phone_number.in_(variants)).first()
 	if existing:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
 	# Create OTP for registration
