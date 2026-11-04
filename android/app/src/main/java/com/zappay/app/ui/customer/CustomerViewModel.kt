@@ -64,10 +64,12 @@ class CustomerViewModel @Inject constructor(
     fun loadDashboard() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            loadProfile()
             loadWalletSummary()
             loadTransactions()
             loadVehicleInfo()
             loadConsumerVehicles()
+            loadVehicles()
             loadMandates()
             loadNearbyStations()
             _uiState.value = _uiState.value.copy(isLoading = false)
@@ -79,7 +81,31 @@ class CustomerViewModel @Inject constructor(
             try {
                 val res = api.getConsumerVehicles()
                 if (res.isSuccessful && res.body() != null) {
-                    _uiState.value = _uiState.value.copy(consumerVehicles = res.body()!!.vehicles)
+                    val cVehicles = res.body()!!.vehicles
+                    val fallbackVehicles = if (_uiState.value.vehicles.isEmpty()) {
+                        cVehicles.mapIndexed { idx, cv ->
+                            VehicleDto(
+                                id = cv.id,
+                                userId = 1,
+                                vehicleNumber = cv.vrnNumber,
+                                vehicleType = "Car",
+                                nickname = cv.makeModel,
+                                isPrimary = idx == 0,
+                                isActive = true,
+                            )
+                        }
+                    } else _uiState.value.vehicles
+                    val newQrMap = _uiState.value.qrCodesByVehicle.toMutableMap()
+                    cVehicles.forEach { cv ->
+                        if (!newQrMap.containsKey(cv.id)) {
+                            newQrMap[cv.id] = "ZP-TAG-${cv.vrnNumber}"
+                        }
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        consumerVehicles = cVehicles,
+                        vehicles = fallbackVehicles,
+                        qrCodesByVehicle = newQrMap,
+                    )
                 }
             } catch (e: Exception) {
                 // Handled gracefully

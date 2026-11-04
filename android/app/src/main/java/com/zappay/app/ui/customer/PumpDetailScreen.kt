@@ -100,11 +100,11 @@ fun PumpDetailScreen(
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .background(Neutral100)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .padding(horizontal = 20.dp, vertical = 14.dp),
                             ) {
-                                Text("Fuel Type", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), color = Neutral700)
-                                Text("Price", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Neutral700)
+                                Text("Fuel Type", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Price", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
 
                             state.fuelPrices.forEachIndexed { index, fp ->
@@ -147,7 +147,7 @@ fun PumpDetailScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Primary50),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(Modifier.padding(20.dp)) {

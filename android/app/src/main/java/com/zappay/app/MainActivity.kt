@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ZapPayTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = White) {
+                Surface(modifier = Modifier.fillMaxSize(), color = androidx.compose.material3.MaterialTheme.colorScheme.background) {
                     val navController = rememberNavController()
                     ZapPayNavGraph(navController = navController)
                 }

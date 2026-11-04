@@ -26,6 +26,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,9 +35,11 @@ fun QRCodeScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.loadVehicleInfo()
+        viewModel.loadConsumerVehicles()
         viewModel.loadVehicles()
     }
 
@@ -79,7 +82,7 @@ fun QRCodeScreen(
                     state.vehicles.forEachIndexed { index, vehicle ->
                         FilterChip(
                             selected = index == pagerState.currentPage,
-                            onClick = {},
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                             label = { Text(vehicle.vehicleNumber, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Primary50,
@@ -100,14 +103,14 @@ fun QRCodeScreen(
                         // QR Card with premium border
                         Card(
                             modifier = Modifier
-                                .size(300.dp)
+                                .size(280.dp)
                                 .border(
                                     width = 3.dp,
                                     brush = GoldGradient,
                                     shape = RoundedCornerShape(24.dp),
                                 ),
                             shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            colors = CardDefaults.cardColors(containerColor = White),
                             elevation = CardDefaults.cardElevation(6.dp),
                         ) {
                             Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {

@@ -69,6 +69,8 @@ fun CustomerMainScreen(
             }
         },
     ) { padding ->
-        content(padding)
+        Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
+            content(padding)
+        }
     }
 }

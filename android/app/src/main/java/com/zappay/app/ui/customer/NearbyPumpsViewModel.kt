@@ -29,10 +29,26 @@ class NearbyPumpsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = pumpRepository.getNearbyPumps(lat, lng, radius)) {
-                is Resource.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    nearbyPumps = result.data.nearbyPumps,
-                )
+                is Resource.Success -> {
+                    if (result.data.nearbyPumps.isEmpty() && radius < 2000.0) {
+                        when (val wide = pumpRepository.getNearbyPumps(lat, lng, 5000.0)) {
+                            is Resource.Success -> _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                nearbyPumps = wide.data.nearbyPumps,
+                            )
+                            is Resource.Error -> _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = wide.message,
+                            )
+                            else -> {}
+                        }
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            nearbyPumps = result.data.nearbyPumps,
+                        )
+                    }
+                }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = result.message,

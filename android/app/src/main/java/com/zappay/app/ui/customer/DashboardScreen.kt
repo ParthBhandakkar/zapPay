@@ -68,8 +68,8 @@ fun CustomerDashboardScreen(
                         }
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("ZapPay 2.0", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            Text("Aakash Verma • Personal & Family Vault", fontSize = 11.sp, color = Gray600)
+                            Text("ZapPay 2.0", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("${state.profile?.fullName ?: "Parth Dev"} • Personal & Family Vault", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 },
@@ -78,7 +78,7 @@ fun CustomerDashboardScreen(
                         Icon(Icons.Default.QrCode, contentDescription = "My QR", tint = Purple500)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
     ) { padding ->
@@ -217,7 +217,7 @@ fun CustomerDashboardScreen(
             }
 
             stations.forEach { station ->
-                StationListItem(station = station)
+                StationListItem(station = station, onClick = onNavigateToNearbyPumps)
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -233,15 +233,15 @@ fun CustomerDashboardScreen(
             title = { Text("360° Vehicle Compliance Vault", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    DetailRow("Vehicle Number", v?.vrnNumber ?: "CG-10-AB-4582")
+                    DetailRow("Vehicle Number", v?.vrnNumber ?: "MH12AB1234")
                     DetailRow("Vahan Verification", if (v?.vahanVerified != false) "VERIFIED (MoRTH)" else "PENDING")
                     DetailRow("Permitted Fuel", v?.fuelType ?: "PETROL ONLY")
-                    DetailRow("Insurance Validity", v?.insuranceExpiryDate ?: "Valid till 2027-04-15")
-                    DetailRow("PUC Validity", v?.pucExpiryDate ?: "Valid till 2026-12-10")
+                    DetailRow("Insurance Validity", v?.insuranceExpiryDate?.take(10) ?: "2027-04-15")
+                    DetailRow("PUC Validity", v?.pucExpiryDate?.take(10) ?: "2026-12-10")
                     DetailRow("Tank Capacity", "${v?.tankCapacityLitres ?: 44.0} Litres")
-                    DetailRow("Average Mileage", "${v?.avgMileageKmpl ?: 17.2} km/L")
-                    DetailRow("Blood Group (SOS)", v?.bloodGroup ?: "O+")
-                    DetailRow("Emergency Contact", "${v?.emergencyContactName ?: "Pooja Verma"} (${v?.emergencyContactPhone ?: "9876543211"})")
+                    DetailRow("Average Mileage", "${v?.avgMileageKmpl ?: 16.8} km/L")
+                    DetailRow("Blood Group (SOS)", v?.bloodGroup ?: "B+")
+                    DetailRow("Emergency Contact", "${v?.emergencyContactName ?: "Family Member"} (${v?.emergencyContactPhone ?: "+919876500000"})")
                 }
             },
             confirmButton = {
@@ -257,22 +257,22 @@ fun CustomerDashboardScreen(
             title = { Text("NPCI UPI Circle (Delegated Fueling)", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Delegate capped fueling to college students, family members, or domestic staff with time and rupee limits.", fontSize = 12.sp, color = Gray700)
+                    Text("Delegate capped fueling to college students, family members, or domestic staff with time and rupee limits.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
 
-                    Card(colors = CardDefaults.cardColors(containerColor = Purple50), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(10.dp)) {
-                            Text("Rohan Verma (Son - 2 Wheeler)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("Monthly Cap: ₹1,500 • Fuel Lock: Petrol", fontSize = 12.sp, color = Gray600)
+                            Text("Rohan Verma (Son - 2 Wheeler)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Monthly Cap: ₹1,500 • Fuel Lock: Petrol", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("Status: ACTIVE & DELEGATED", fontSize = 11.sp, color = Green500, fontWeight = FontWeight.Bold)
                         }
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    Card(colors = CardDefaults.cardColors(containerColor = Gray100), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(10.dp)) {
-                            Text("Sunita Bai (Family Car Driver)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("Per Fill Cap: ₹2,000 • Diesel Only", fontSize = 12.sp, color = Gray600)
+                            Text("Sunita Bai (Family Car Driver)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Per Fill Cap: ₹2,000 • Diesel Only", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("Status: ACTIVE & DELEGATED", fontSize = 11.sp, color = Green500, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -386,7 +386,7 @@ private fun VehicleVaultBannerCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpenVault),
-        colors = CardDefaults.cardColors(containerColor = Gray100),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -394,12 +394,12 @@ private fun VehicleVaultBannerCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = Purple500)
                     Spacer(Modifier.width(8.dp))
-                    Text(vehicle?.vrnNumber ?: "CG-10-AB-4582", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Text(vehicle?.vrnNumber ?: "MH12AB1234", fontWeight = FontWeight.Black, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Green100)
+                        .background(Green500.copy(alpha = 0.18f))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 ) {
                     Text("VAHAN VERIFIED", color = Green500, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -407,13 +407,13 @@ private fun VehicleVaultBannerCard(
             }
 
             Spacer(Modifier.height(6.dp))
-            Text(vehicle?.makeModel ?: "Tata Nexon EV / Petrol • 44L Tank", fontSize = 12.sp, color = Gray700)
+            Text(vehicle?.makeModel ?: "Tata Nexon Fearless Petrol • 44L Tank", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 VaultStatusPill("Insurance: 2027", isValid = true)
                 VaultStatusPill("PUC: Valid", isValid = true)
-                VaultStatusPill("${vehicle?.avgMileageKmpl ?: 17.2} km/L", isValid = true)
+                VaultStatusPill("${vehicle?.avgMileageKmpl ?: 16.8} km/L", isValid = true)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -431,7 +431,7 @@ private fun VaultStatusPill(text: String, isValid: Boolean) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isValid) Green100 else Red100)
+            .background(if (isValid) Green500.copy(alpha = 0.18f) else Red500.copy(alpha = 0.18f))
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = if (isValid) Green500 else Red500)
@@ -451,7 +451,7 @@ private fun QuickActionCard(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -465,17 +465,17 @@ private fun QuickActionCard(
                 Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.height(10.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text(subtitle, fontSize = 11.sp, color = Gray600)
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun StationListItem(station: StationDto) {
+private fun StationListItem(station: StationDto, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = White),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp),
     ) {
@@ -485,8 +485,8 @@ private fun StationListItem(station: StationDto) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(station.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(station.city, fontSize = 11.sp, color = Gray600)
+                Text(station.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(station.city, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Petrol Density: ${station.verifiedPetrolDensity ?: 742.0} kg/m³", fontSize = 11.sp, color = Green500, fontWeight = FontWeight.SemiBold)
@@ -496,7 +496,7 @@ private fun StationListItem(station: StationDto) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("${station.trustScore ?: 5.0}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("${station.trustScore ?: 5.0}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Text(station.mdrMode ?: "0% DEALER FEE", fontSize = 9.sp, color = Purple500, fontWeight = FontWeight.Bold)
             }
@@ -510,7 +510,7 @@ private fun DetailRow(label: String, value: String) {
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Gray600, fontSize = 12.sp)
-        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
