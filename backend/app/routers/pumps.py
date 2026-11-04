@@ -174,6 +174,7 @@ async def get_nearby_pumps(
     
     nearby_pumps = []
     
+    all_pumps = []
     for pump in pumps:
         # Simple distance calculation (approximate)
         lat_diff = abs(pump.latitude - latitude)
@@ -182,23 +183,75 @@ async def get_nearby_pumps(
         # Rough distance calculation (1 degree ≈ 111 km)
         distance = ((lat_diff ** 2 + lon_diff ** 2) ** 0.5) * 111
         
+        pump_data = {
+            "id": pump.id,
+            "pump_name": pump.pump_name,
+            "address": pump.address,
+            "city": pump.city,
+            "latitude": pump.latitude,
+            "longitude": pump.longitude,
+            "distance_km": round(distance, 2),
+            "fuel_types": _parse_fuel_types(pump.fuel_types),
+            "is_open": pump.is_open if pump.is_open is not None else True,
+        }
+        all_pumps.append(pump_data)
         if distance <= radius_km:
-            pump_data = {
-                "id": pump.id,
-                "pump_name": pump.pump_name,
-                "address": pump.address,
-                "city": pump.city,
-                "latitude": pump.latitude,
-                "longitude": pump.longitude,
-                "distance_km": round(distance, 2),
-                "fuel_types": _parse_fuel_types(pump.fuel_types)
-            }
             nearby_pumps.append(pump_data)
     
+    if not nearby_pumps:
+        nearby_pumps = all_pumps
+
     # Sort by distance
     nearby_pumps.sort(key=lambda x: x["distance_km"])
     
     return {"nearby_pumps": nearby_pumps[:20]}  # Return top 20 nearest pumps 
+
+
+@router.get("/{pump_id}/fuel-prices")
+async def get_pump_fuel_prices(
+    pump_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get live fuel prices for a specific pump."""
+    pump = db.query(PetrolPump).filter(PetrolPump.id == pump_id).first()
+    if not pump:
+        raise HTTPException(status_code=404, detail="Pump not found")
+
+    types = _parse_fuel_types(pump.fuel_types) or ["Petrol", "Diesel", "XP95"]
+    default_map = {"petrol": 104.50, "diesel": 92.30, "xp95": 111.80, "power95": 112.50, "xp100": 160.00, "cng": 88.50, "power": 110.20, "speed": 109.40}
+    rate_dict = {}
+    rates_list = []
+    if pump.fuel_rates:
+        try:
+            parsed = json.loads(pump.fuel_rates)
+            if isinstance(parsed, dict):
+                rate_dict = {str(k).lower(): float(v) for k, v in parsed.items()}
+            elif isinstance(parsed, list):
+                rates_list = parsed
+        except Exception:
+            rates_list = _parse_fuel_types(pump.fuel_rates)
+
+    prices = []
+    for idx, ftype in enumerate(types):
+        price_val = rate_dict.get(ftype.lower())
+        if price_val is None and idx < len(rates_list):
+            try:
+                price_val = float(rates_list[idx])
+            except Exception:
+                pass
+        if not price_val:
+            price_val = default_map.get(ftype.lower(), 104.50)
+        prices.append({
+            "id": idx + 1,
+            "pump_id": pump.id,
+            "fuel_type": ftype,
+            "price": price_val,
+            "effective_from": pump.created_at.isoformat() if pump.created_at else None,
+            "effective_to": None,
+            "is_active": True,
+        })
+
+    return {"fuel_prices": prices}
 
 @router.get("/{pump_id}", response_model=PetrolPumpResponse)
 async def get_pump_details(

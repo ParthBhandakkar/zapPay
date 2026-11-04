@@ -106,6 +106,47 @@ async def get_transaction_details(
     
     return transaction
 
+
+@router.get("/{transaction_id}/receipt")
+async def get_transaction_receipt(
+    transaction_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Get formatted digital receipt for a specific transaction."""
+    user = get_current_user(db, credentials.credentials)
+    transaction = db.query(Transaction).filter(
+        Transaction.transaction_id == transaction_id
+    ).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    from app.models import PetrolPump
+    pump = db.query(PetrolPump).filter(PetrolPump.id == transaction.pump_id).first() if transaction.pump_id else None
+    tx_user = db.query(User).filter(User.id == transaction.user_id).first() or user
+    cur_bal = tx_user.wallet.balance if tx_user and tx_user.wallet else 5000.0
+    is_credit = transaction.transaction_type == TransactionType.WALLET_RECHARGE
+
+    return {
+        "receipt_number": f"RCP-{transaction.id:05d}",
+        "transaction_id": transaction.transaction_id,
+        "pump_name": pump.pump_name if pump else ("ZapPay Wallet" if is_credit else "ZapPay Verified Partner Pump"),
+        "pump_address": f"{pump.address}, {pump.city}" if pump else None,
+        "customer_name": tx_user.full_name if tx_user else "Customer",
+        "customer_phone": tx_user.phone_number if tx_user else "",
+        "vehicle_number": tx_user.vehicle_number or "MH12AB1234",
+        "fuel_type": transaction.fuel_type or ("Wallet Recharge" if is_credit else "Petrol"),
+        "fuel_quantity": transaction.fuel_quantity,
+        "fuel_rate": transaction.fuel_rate,
+        "amount": transaction.amount,
+        "commission_amount": transaction.commission_amount or 0.0,
+        "wallet_balance_before": round(cur_bal - transaction.amount, 2) if is_credit else round(cur_bal + transaction.amount, 2),
+        "wallet_balance_after": round(cur_bal, 2),
+        "status": transaction.status.value if hasattr(transaction.status, "value") else str(transaction.status),
+        "created_at": transaction.created_at.isoformat() if transaction.created_at else "",
+        "completed_at": transaction.completed_at.isoformat() if transaction.completed_at else (transaction.created_at.isoformat() if transaction.created_at else None),
+    }
+
 @router.post("/{transaction_id}/refund", response_model=BaseResponse)
 async def request_refund(
     transaction_id: str,

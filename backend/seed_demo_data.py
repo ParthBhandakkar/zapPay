@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.models import (
     User, UserRole, Wallet, PetrolPump, Vehicle, QRTag, PaymentMandate,
     PumpOperator, Transaction, TransactionType, TransactionStatus,
-    VehicleType, QRTagStatus, MandateRail, FuelCategory
+    VehicleType, QRTagStatus, MandateRail, FuelCategory, UserVehicle
 )
 from app.services.auth import get_password_hash
 
@@ -208,6 +208,88 @@ def seed():
             is_verified=True
         )
         db.add_all([p1, p2, p3])
+
+    db.flush()
+    demo_user = db.query(User).filter(User.phone_number == "+919876543210").first()
+    if demo_user:
+        demo_user.address = "Baner-Pashan Link Road, Baner"
+        demo_user.city = "Pune"
+        demo_user.state = "Maharashtra"
+        demo_user.pincode = "411045"
+        demo_user.vehicle_number = "MH12AB1234"
+        demo_user.vehicle_type = "Car"
+
+        if db.query(UserVehicle).filter(UserVehicle.user_id == demo_user.id).count() == 0:
+            print("Seeding UserVehicle entries...")
+            db.add_all([
+                UserVehicle(
+                    user_id=demo_user.id,
+                    vehicle_number="MH12AB1234",
+                    vehicle_type="Car",
+                    nickname="Tata Nexon Fearless",
+                    is_primary=True,
+                    is_active=True,
+                ),
+                UserVehicle(
+                    user_id=demo_user.id,
+                    vehicle_number="MH14CD5678",
+                    vehicle_type="Car",
+                    nickname="Hyundai Creta SX",
+                    is_primary=False,
+                    is_active=True,
+                ),
+            ])
+
+        wallet = db.query(Wallet).filter(Wallet.user_id == demo_user.id).first()
+        first_pump = db.query(PetrolPump).first()
+        if wallet and db.query(Transaction).filter(Transaction.user_id == demo_user.id).count() == 0:
+            print("Seeding demo transactions...")
+            now = datetime.utcnow()
+            db.add_all([
+                Transaction(
+                    transaction_id="TXN-ZP-2026-1001",
+                    user_id=demo_user.id,
+                    wallet_id=wallet.id,
+                    transaction_type=TransactionType.WALLET_RECHARGE,
+                    amount=5000.0,
+                    commission_amount=0.0,
+                    status=TransactionStatus.COMPLETED,
+                    created_at=now - timedelta(days=3),
+                    completed_at=now - timedelta(days=3),
+                ),
+                Transaction(
+                    transaction_id="TXN-ZP-2026-1002",
+                    user_id=demo_user.id,
+                    wallet_id=wallet.id,
+                    pump_id=first_pump.id if first_pump else None,
+                    transaction_type=TransactionType.FUEL_PURCHASE,
+                    amount=1563.15,
+                    commission_amount=18.75,
+                    fuel_quantity=15.0,
+                    fuel_type="Petrol",
+                    fuel_rate=104.21,
+                    ocr_verified=True,
+                    status=TransactionStatus.COMPLETED,
+                    created_at=now - timedelta(days=2),
+                    completed_at=now - timedelta(days=2),
+                ),
+                Transaction(
+                    transaction_id="TXN-ZP-2026-1003",
+                    user_id=demo_user.id,
+                    wallet_id=wallet.id,
+                    pump_id=first_pump.id if first_pump else None,
+                    transaction_type=TransactionType.FUEL_PURCHASE,
+                    amount=907.50,
+                    commission_amount=10.89,
+                    fuel_quantity=10.0,
+                    fuel_type="Diesel",
+                    fuel_rate=90.75,
+                    ocr_verified=True,
+                    status=TransactionStatus.COMPLETED,
+                    created_at=now - timedelta(hours=6),
+                    completed_at=now - timedelta(hours=6),
+                ),
+            ])
 
     db.commit()
     print("Database seeding completed successfully!")
