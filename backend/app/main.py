@@ -84,6 +84,7 @@ from app.routers import consumer
 from app.routers import fleet
 from app.routers import dealer
 from app.routers import public_scan
+from app.routers import ev
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(wallet.router, prefix="/api/v1/wallet", tags=["wallet"])
@@ -99,6 +100,7 @@ app.include_router(consumer.router)
 app.include_router(fleet.router)
 app.include_router(dealer.router)
 app.include_router(public_scan.router)
+app.include_router(ev.router)
 
 
 # ── Health ─────────────────────────────────────────────────────────────
