@@ -46,6 +46,9 @@ fun CustomerDashboardScreen(
     var showCircleSheet by remember { mutableStateOf(false) }
     var showPuritySheet by remember { mutableStateOf(false) }
     var showSosSimulatorSheet by remember { mutableStateOf(false) }
+    var showEvRoutePlanner by remember { mutableStateOf(false) }
+    var showEvBatteryVault by remember { mutableStateOf(false) }
+    var showEvCarbonCredits by remember { mutableStateOf(false) }
     var alertSentToast by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -61,21 +64,26 @@ fun CustomerDashboardScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Purple500),
+                                .background(if (state.isEvMode) Teal500 else Purple500),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text("ZP", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text(if (state.isEvMode) "⚡" else "ZP", color = White, fontWeight = FontWeight.Black, fontSize = 14.sp)
                         }
                         Spacer(Modifier.width(10.dp))
                         Column {
-                            Text("ZapPay 2.0", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text("${state.profile?.fullName ?: "Parth Dev"} • Personal & Family Vault", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (state.isEvMode) "ZapPay EV ⚡" else "ZapPay 2.0", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                if (state.isEvMode) "${state.profile?.fullName ?: "Parth Dev"} • Tata Nexon EV (Empowered)"
+                                else "${state.profile?.fullName ?: "Parth Dev"} • Personal & Family Vault",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 },
                 actions = {
                     IconButton(onClick = onNavigateToQR) {
-                        Icon(Icons.Default.QrCode, contentDescription = "My QR", tint = Purple500)
+                        Icon(Icons.Default.QrCode, contentDescription = "My QR", tint = if (state.isEvMode) Teal500 else Purple500)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -104,121 +112,207 @@ fun CustomerDashboardScreen(
                 }
             }
 
-            // ── ZERO-WAIT AUTOPAY BANNER ─────────────────────────────────────
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Purple700),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("UPI AUTOPAY • ZERO-WAIT FUELING", color = White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Green500.copy(alpha = 0.25f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                        ) {
-                            Text("ACTIVE", color = Green500, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("₹${"%.2f".format(state.balance)}", fontSize = 32.sp, fontWeight = FontWeight.Black, color = White)
-                    Text("Auto-debits up to ₹2,500 without PIN at verified pumps", fontSize = 12.sp, color = White.copy(alpha = 0.8f))
+            // ── TOP SEGMENTED SWITCHER: FUEL MODE ⇄ EV MODE ────────────────
+            ModeSelectorPill(
+                isEvMode = state.isEvMode,
+                onModeSelected = { isEv ->
+                    viewModel.setEvMode(isEv)
+                },
+                modifier = Modifier.padding(bottom = 14.dp),
+            )
 
-                    Spacer(Modifier.height(14.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = onNavigateToWallet,
-                            colors = ButtonDefaults.buttonColors(containerColor = White),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Manage Limits", color = Purple700, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            if (!state.isEvMode) {
+                // ── ZERO-WAIT AUTOPAY BANNER ─────────────────────────────────────
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Purple700),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("UPI AUTOPAY • ZERO-WAIT FUELING", color = White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Green500.copy(alpha = 0.25f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            ) {
+                                Text("ACTIVE", color = Green500, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
-                        OutlinedButton(
-                            onClick = { showCircleSheet = true },
-                            border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(White)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("UPI Circle", color = White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("₹${"%.2f".format(state.balance)}", fontSize = 32.sp, fontWeight = FontWeight.Black, color = White)
+                        Text("Auto-debits up to ₹2,500 without PIN at verified pumps", fontSize = 12.sp, color = White.copy(alpha = 0.8f))
+
+                        Spacer(Modifier.height(14.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = onNavigateToWallet,
+                                colors = ButtonDefaults.buttonColors(containerColor = White),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("Manage Limits", color = Purple700, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = { showCircleSheet = true },
+                                border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(White)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("UPI Circle", color = White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(18.dp))
 
-            // ── 360° VEHICLE IDENTITY & COMPLIANCE VAULT ─────────────────────
-            val primaryVehicle = state.consumerVehicles.firstOrNull()
-            VehicleVaultBannerCard(
-                vehicle = primaryVehicle,
-                onOpenVault = { showVaultSheet = true },
-            )
-
-            Spacer(Modifier.height(18.dp))
-
-            // ── QUICK ACTION MATRIX ──────────────────────────────────────────
-            Text("Ecosystem Utilities", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(Modifier.height(10.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickActionCard(
-                    title = "Compliance Vault",
-                    subtitle = "RC, Insurance, PUC",
-                    icon = Icons.Default.VerifiedUser,
-                    color = Blue500,
-                    modifier = Modifier.weight(1f),
-                    onClick = { showVaultSheet = true },
+                // ── 360° VEHICLE IDENTITY & COMPLIANCE VAULT ─────────────────────
+                val primaryVehicle = state.consumerVehicles.firstOrNull()
+                VehicleVaultBannerCard(
+                    vehicle = primaryVehicle,
+                    onOpenVault = { showVaultSheet = true },
                 )
-                QuickActionCard(
-                    title = "UPI Circle",
-                    subtitle = "Family Fuel Caps",
-                    icon = Icons.Default.Group,
-                    color = Purple500,
-                    modifier = Modifier.weight(1f),
-                    onClick = { showCircleSheet = true },
-                )
-            }
 
-            Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(18.dp))
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickActionCard(
-                    title = "Fuel Purity & Mileage",
-                    subtitle = "Pump Scores & km/L",
-                    icon = Icons.Default.Speed,
-                    color = Green500,
-                    modifier = Modifier.weight(1f),
-                    onClick = { showPuritySheet = true },
-                )
-                QuickActionCard(
-                    title = "Masked Call & SOS",
-                    subtitle = "Passerby Alert Test",
-                    icon = Icons.Default.PhoneCallback,
-                    color = Color(0xFFE65100),
-                    modifier = Modifier.weight(1f),
-                    onClick = { showSosSimulatorSheet = true },
-                )
-            }
+                // ── QUICK ACTION MATRIX ──────────────────────────────────────────
+                Text("Ecosystem Utilities", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(10.dp))
 
-            Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionCard(
+                        title = "Compliance Vault",
+                        subtitle = "RC, Insurance, PUC",
+                        icon = Icons.Default.VerifiedUser,
+                        color = Blue500,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showVaultSheet = true },
+                    )
+                    QuickActionCard(
+                        title = "UPI Circle",
+                        subtitle = "Family Fuel Caps",
+                        icon = Icons.Default.Group,
+                        color = Purple500,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showCircleSheet = true },
+                    )
+                }
 
-            // ── NEARBY CERTIFIED PUMPS WITH VERIFIED DENSITY ─────────────────
-            Text("Nearby Verified Petrol Pumps", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
 
-            val stations = state.nearbyStations.ifEmpty {
-                listOf(
-                    StationDto(1, "Bharat Petroleum - Ring Road", "Bilaspur", 743.2, 836.5, 4.95, "0% DEALER SUBSIDIZED"),
-                    StationDto(2, "Indian Oil Expressway Hub", "Raipur", 741.8, 835.0, 4.88, "0.5% MDR"),
-                )
-            }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionCard(
+                        title = "Fuel Purity & Mileage",
+                        subtitle = "Pump Scores & km/L",
+                        icon = Icons.Default.Speed,
+                        color = Green500,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showPuritySheet = true },
+                    )
+                    QuickActionCard(
+                        title = "Masked Call & SOS",
+                        subtitle = "Passerby Alert Test",
+                        icon = Icons.Default.PhoneCallback,
+                        color = Color(0xFFE65100),
+                        modifier = Modifier.weight(1f),
+                        onClick = { showSosSimulatorSheet = true },
+                    )
+                }
 
-            stations.forEach { station ->
-                StationListItem(station = station, onClick = onNavigateToNearbyPumps)
+                Spacer(Modifier.height(20.dp))
+
+                // ── NEARBY CERTIFIED PUMPS WITH VERIFIED DENSITY ─────────────────
+                Text("Nearby Verified Petrol Pumps", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(8.dp))
+
+                val stations = state.nearbyStations.ifEmpty {
+                    listOf(
+                        StationDto(1, "Bharat Petroleum - Ring Road", "Bilaspur", 743.2, 836.5, 4.95, "0% DEALER SUBSIDIZED"),
+                        StationDto(2, "Indian Oil Expressway Hub", "Raipur", 741.8, 835.0, 4.88, "0.5% MDR"),
+                    )
+                }
+
+                stations.forEach { station ->
+                    StationListItem(station = station, onClick = onNavigateToNearbyPumps)
+                    Spacer(Modifier.height(8.dp))
+                }
+            } else {
+                // ── EV MODE ECOSYSTEM DASHBOARD ──────────────────────────────────
+                EvLiveChargingCard(
+                    state = state,
+                    onStartCharge = {
+                        viewModel.startLiveCharging("Tata Power EZ Charge - Baner", "CCS2 Fast Gun (60 kW)")
+                    },
+                    onStopCharge = {
+                        val cost = state.chargingSessionCost
+                        viewModel.stopLiveCharging()
+                        alertSentToast = "Charging completed! ₹${"%.2f".format(cost)} debited via ZapPay UPI AutoPay."
+                    },
+                    onNavigateToWallet = onNavigateToWallet,
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                EvBatteryTelemetryCard(
+                    state = state,
+                    onToggleAc = { viewModel.toggleCabinPreconditioning() },
+                    onTogglePortLock = { viewModel.togglePortLock() },
+                    onRotateLimit = {
+                        val nextLimit = when (state.evTargetSocLimit) {
+                            80 -> 90
+                            90 -> 100
+                            else -> 80
+                        }
+                        viewModel.setTargetSocLimit(nextLimit)
+                    },
+                    onOpenBatteryVault = { showEvBatteryVault = true },
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                EvEcosystemUtilitiesMatrix(
+                    onOpenReservation = {
+                        val firstStation = state.evStations.firstOrNull()
+                        if (firstStation != null) {
+                            viewModel.selectEvStation(firstStation)
+                        } else {
+                            viewModel.reserveGun("GUN-01", "Tata Power EZ Charge - Baner")
+                            alertSentToast = "Gun #1 reserved for 15 minutes at Tata Power EZ Charge!"
+                        }
+                    },
+                    onOpenRoutePlanner = { showEvRoutePlanner = true },
+                    onOpenBatteryVault = { showEvBatteryVault = true },
+                    onOpenCarbonCredits = { showEvCarbonCredits = true },
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("EV Fast Charging Hubs", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    TextButton(onClick = onNavigateToNearbyPumps) {
+                        Text("View Map", color = Teal500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+
+                state.evStations.forEach { station ->
+                    EvStationCard(
+                        station = station,
+                        onClick = { viewModel.selectEvStation(station) },
+                        onReserve = {
+                            val availableGun = station.connectors.firstOrNull { it.status == "AVAILABLE" }?.connectorId ?: "GUN-01"
+                            viewModel.reserveGun(availableGun, station.name)
+                            alertSentToast = "Slot reserved: Gun $availableGun at ${station.name} (Valid for 15 mins)!"
+                        },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }
@@ -371,6 +465,46 @@ fun CustomerDashboardScreen(
             confirmButton = {
                 TextButton(onClick = { showSosSimulatorSheet = false }) { Text("Close") }
             },
+        )
+    }
+
+    // 5. EV Station Detail & Gun Reservation Dialog
+    state.selectedEvStation?.let { station ->
+        EvStationDetailDialog(
+            station = station,
+            onDismiss = { viewModel.selectEvStation(null) },
+            onReserve = { gunId ->
+                viewModel.reserveGun(gunId, station.name)
+                viewModel.selectEvStation(null)
+                alertSentToast = "Slot reserved: Gun $gunId at ${station.name} (Valid for 15 mins)!"
+            },
+            onStartCharge = { stationName, connector ->
+                viewModel.selectEvStation(null)
+                viewModel.startLiveCharging(stationName, connector)
+                alertSentToast = "⚡ Plugged in! Live supercharging session started at $stationName."
+            },
+        )
+    }
+
+    // 6. EV Route Planner Dialog
+    if (showEvRoutePlanner) {
+        EvRoutePlannerDialog(
+            currentRangeKm = state.evRangeKm,
+            onDismiss = { showEvRoutePlanner = false },
+        )
+    }
+
+    // 7. EV Battery Health Vault Dialog
+    if (showEvBatteryVault) {
+        EvBatteryVaultDialog(
+            onDismiss = { showEvBatteryVault = false },
+        )
+    }
+
+    // 8. EV Green Carbon Credits Certificate Dialog
+    if (showEvCarbonCredits) {
+        EvCarbonCreditsDialog(
+            onDismiss = { showEvCarbonCredits = false },
         )
     }
 }

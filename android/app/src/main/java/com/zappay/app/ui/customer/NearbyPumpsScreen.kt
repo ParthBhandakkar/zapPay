@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.zappay.app.data.remote.dto.EvConnectorDto
+import com.zappay.app.data.remote.dto.EvStationDto
 import com.zappay.app.data.remote.dto.NearbyPumpDto
 import com.zappay.app.ui.components.*
 import com.zappay.app.ui.theme.*
@@ -40,8 +42,103 @@ fun NearbyPumpsScreen(
     onPumpClick: (NearbyPumpDto) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    var filterMode by remember { mutableStateOf(0) } // 0 = Fuel, 1 = EV Fast Hubs
     var locationLoaded by remember { mutableStateOf(false) }
     var locationPermissionRequested by remember { mutableStateOf(false) }
+
+    val evStations = remember {
+        listOf(
+            EvStationDto(
+                id = 1,
+                name = "Tata Power EZ Charge - Baner",
+                operator = "Tata Power",
+                address = "Near Balewadi High St, Baner",
+                city = "Pune",
+                distanceKm = 1.8,
+                latitude = 18.5590,
+                longitude = 73.7868,
+                totalGuns = 4,
+                availableGuns = 3,
+                connectors = listOf(
+                    EvConnectorDto("GUN-01", "CCS2", 60.0, 18.5, "AVAILABLE"),
+                    EvConnectorDto("GUN-02", "CCS2", 60.0, 18.5, "OCCUPIED"),
+                    EvConnectorDto("GUN-03", "Type 2", 22.0, 15.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-04", "Type 2", 22.0, 15.0, "AVAILABLE"),
+                ),
+                amenities = listOf("Café Coffee Day", "Restroom", "24/7 Security", "WiFi"),
+                rating = 4.8,
+            ),
+            EvStationDto(
+                id = 2,
+                name = "Jio-bp pulse Fast Charging Hub",
+                operator = "Jio-bp pulse",
+                address = "Phase 1, Rajiv Gandhi Infotech Park",
+                city = "Hinjawadi",
+                distanceKm = 3.4,
+                latitude = 18.5913,
+                longitude = 73.7389,
+                totalGuns = 4,
+                availableGuns = 2,
+                connectors = listOf(
+                    EvConnectorDto("GUN-01", "CCS2", 120.0, 19.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-02", "CCS2", 120.0, 19.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-03", "CCS2", 60.0, 18.0, "OCCUPIED"),
+                    EvConnectorDto("GUN-04", "Type 2", 22.0, 15.0, "OCCUPIED"),
+                ),
+                amenities = listOf("Wild Bean Cafe", "EV Lounge", "ATM"),
+                rating = 4.9,
+            ),
+            EvStationDto(
+                id = 3,
+                name = "Statiq EV Mega Hub - Urse",
+                operator = "Statiq",
+                address = "Pune-Mumbai Expressway, Urse Toll Plaza",
+                city = "Urse",
+                distanceKm = 12.5,
+                latitude = 18.7200,
+                longitude = 73.6500,
+                totalGuns = 6,
+                availableGuns = 5,
+                connectors = listOf(
+                    EvConnectorDto("GUN-01", "CCS2", 150.0, 17.8, "AVAILABLE"),
+                    EvConnectorDto("GUN-02", "CCS2", 150.0, 17.8, "AVAILABLE"),
+                    EvConnectorDto("GUN-03", "CCS2", 120.0, 17.8, "AVAILABLE"),
+                    EvConnectorDto("GUN-04", "CCS2", 60.0, 17.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-05", "CCS2", 60.0, 17.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-06", "Type 2", 22.0, 14.5, "OCCUPIED"),
+                ),
+                amenities = listOf("Food Mall", "Kids Play Area", "Lounge"),
+                rating = 4.7,
+            ),
+            EvStationDto(
+                id = 4,
+                name = "Zeon Electric Hub - Balewadi",
+                operator = "Zeon",
+                address = "Balewadi High Street Parking P2",
+                city = "Balewadi",
+                distanceKm = 4.2,
+                latitude = 18.5720,
+                longitude = 73.7740,
+                totalGuns = 2,
+                availableGuns = 2,
+                connectors = listOf(
+                    EvConnectorDto("GUN-01", "CCS2", 50.0, 18.0, "AVAILABLE"),
+                    EvConnectorDto("GUN-02", "Type 2", 22.0, 15.0, "AVAILABLE"),
+                ),
+                amenities = listOf("Shopping", "Restaurants", "Covered Parking"),
+                rating = 4.6,
+            ),
+        )
+    }
+
+    val fallbackFuelPumps = remember {
+        listOf(
+            NearbyPumpDto(1, "Bharat Petroleum - Ring Road Hub", "Bilaspur Ring Road, Near High Court", "Bilaspur", 22.0797, 82.1409, 1.2, listOf("PETROL", "DIESEL"), true, null),
+            NearbyPumpDto(2, "Indian Oil Expressway Smart Forecourt", "Raipur Highway, Bilaspur", "Bilaspur", 22.0500, 82.1200, 2.6, listOf("PETROL", "DIESEL", "XP95"), true, null),
+            NearbyPumpDto(3, "Hindustan Petroleum - City Central", "Vyapar Vihar, Bilaspur", "Bilaspur", 22.0850, 82.1550, 3.8, listOf("PETROL", "DIESEL"), true, null),
+        )
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -81,44 +178,68 @@ fun NearbyPumpsScreen(
     }
 
     Scaffold(
-        topBar = { ZapPayTopBar(title = "Nearby Pumps", onBack = onBack) },
+        topBar = { ZapPayTopBar(title = if (filterMode == 1) "EV Charging Hubs" else "Nearby Pumps", onBack = onBack) },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when {
-                state.isLoading && state.nearbyPumps.isEmpty() -> LoadingScreen()
-                state.error != null && state.nearbyPumps.isEmpty() -> ErrorMessage(
-                    message = state.error!!,
-                    onRetry = {
-                        if (locationHelper.hasLocationPermission()) {
-                            locationHelper.getFreshLocation { loc ->
-                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 2000.0)
-                            }
-                        } else {
-                            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
-                        }
-                    },
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            // Filter Pills
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = filterMode == 0,
+                    onClick = { filterMode = 0 },
+                    label = { Text("⛽ Petrol / Diesel", fontSize = 12.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Primary50,
+                        selectedLabelColor = Primary700,
+                    ),
+                    modifier = Modifier.weight(1f),
                 )
-                state.nearbyPumps.isEmpty() -> ZapPayEmptyState(
-                    icon = Icons.Outlined.LocalGasStation,
-                    title = "No nearby pumps found",
-                    subtitle = "We couldn't find any partner pumps in your area. Try increasing your search radius or come back later.",
-                    actionText = "Refresh Search",
-                    onAction = {
-                        if (locationHelper.hasLocationPermission()) {
-                            locationHelper.getFreshLocation { loc ->
-                                viewModel.loadNearbyPumps(loc?.latitude ?: 19.0760, loc?.longitude ?: 72.8777, 2000.0)
-                            }
-                        } else {
-                            viewModel.loadNearbyPumps(19.0760, 72.8777, 2000.0)
-                        }
+                FilterChip(
+                    selected = filterMode == 1,
+                    onClick = { filterMode = 1 },
+                    label = { Text("⚡ EV Fast Hubs", fontSize = 12.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Teal500.copy(alpha = 0.15f),
+                        selectedLabelColor = Teal500,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            if (filterMode == 1) {
+                // EV Hubs list
+                LazyColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { Spacer(Modifier.height(4.dp)) }
+                    items(evStations) { stn ->
+                        EvStationCard(
+                            station = stn,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode("${stn.name}, ${stn.address}")}"))
+                                context.startActivity(intent)
+                            },
+                            onReserve = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode("${stn.name}, ${stn.address}")}"))
+                                context.startActivity(intent)
+                            },
+                        )
                     }
-                )
-                else -> LazyColumn(
+                    item { Spacer(Modifier.height(24.dp)) }
+                }
+            } else {
+                val pumpsToDisplay = state.nearbyPumps.ifEmpty { fallbackFuelPumps }
+                LazyColumn(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    item { Spacer(Modifier.height(8.dp)) }
-                    items(state.nearbyPumps) { pump ->
+                    item { Spacer(Modifier.height(4.dp)) }
+                    items(pumpsToDisplay) { pump ->
                         PumpCard(pump = pump, onClick = { onPumpClick(pump) })
                     }
                     item { Spacer(Modifier.height(24.dp)) }

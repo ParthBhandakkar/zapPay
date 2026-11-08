@@ -187,4 +187,23 @@ interface ZapPayApi {
 
     @GET("consumer/stations/nearby")
     suspend fun getNearbyStations(): Response<NearbyStationsResponse>
+
+    // ── ZapPay 2.0 EV Mode & Charging ───────────────────────────────────
+    @GET("ev/stations")
+    suspend fun getEvStations(): Response<EvStationsResponse>
+
+    @GET("ev/telemetry")
+    suspend fun getEvTelemetry(): Response<EvTelemetryDto>
+
+    @POST("ev/charging/start")
+    suspend fun startEvCharging(@Body request: StartEvChargingRequest): Response<EvChargingSessionResponse>
+
+    @POST("ev/charging/stop")
+    suspend fun stopEvCharging(@Body request: StopEvChargingRequest): Response<EvChargingSessionResponse>
+
+    @GET("ev/charging/status")
+    suspend fun getEvChargingStatus(): Response<EvChargingSessionResponse>
+
+    @POST("ev/reserve-slot")
+    suspend fun reserveEvSlot(@Body request: ReserveSlotRequest): Response<ReserveSlotResponse>
 }

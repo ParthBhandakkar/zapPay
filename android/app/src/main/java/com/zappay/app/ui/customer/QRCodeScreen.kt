@@ -68,12 +68,78 @@ fun QRCodeScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            Text("Scan to Pay", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                if (state.isEvMode) "⚡ EV Plug & AutoCharge Pass" else "Scan to Pay",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
             Spacer(Modifier.height(4.dp))
-            Text("Show this code at the fuel pump", color = Neutral500, textAlign = TextAlign.Center)
+            Text(
+                if (state.isEvMode) "Scan at any EV Charger (CCS2 / Type 2) or plug in directly" else "Show this code at the fuel pump",
+                color = Neutral500,
+                textAlign = TextAlign.Center,
+            )
             Spacer(Modifier.height(20.dp))
 
-            if (hasVehicles) {
+            if (state.isEvMode) {
+                // EV AutoCharge Plug & Charge Pass
+                val evQrPayload = "zappay://ev/plug-and-charge/MH12AB1234?user=ParthDev&limit=2500"
+                val bitmap = remember(evQrPayload) { generateQRBitmap(evQrPayload, 512) }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Card(
+                        modifier = Modifier
+                            .size(280.dp)
+                            .border(
+                                width = 3.dp,
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(listOf(ElectricGreen, Teal500, ElectricCyan)),
+                                shape = RoundedCornerShape(24.dp),
+                            ),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = White),
+                        elevation = CardDefaults.cardElevation(6.dp),
+                    ) {
+                        Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
+                            if (bitmap != null) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "EV Plug & AutoCharge Pass",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Teal500),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text("⚡", fontSize = 22.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Bolt, contentDescription = null, tint = Teal500, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("MH12AB1234", fontWeight = FontWeight.Bold, color = Teal500, fontSize = 14.sp)
+                            Text(" · Tata Nexon EV (CCS2)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    Text("AutoPay Active • Max ₹2,500/session @ ₹18.50/kWh", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else if (hasVehicles) {
                 // Vehicle chip selector
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -187,7 +253,7 @@ fun QRCodeScreen(
 
             // Security badge
             Card(
-                colors = CardDefaults.cardColors(containerColor = Success50),
+                colors = CardDefaults.cardColors(containerColor = if (state.isEvMode) Teal500.copy(alpha = 0.12f) else Success50),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -195,11 +261,25 @@ fun QRCodeScreen(
                     Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.Verified, contentDescription = null, tint = Success500, modifier = Modifier.size(18.dp))
+                    Icon(
+                        if (state.isEvMode) Icons.Outlined.ElectricCar else Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = if (state.isEvMode) Teal500 else Success500,
+                        modifier = Modifier.size(18.dp),
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column {
-                        Text("Encrypted & Secure", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Success700)
-                        Text("Each QR is uniquely generated and expires after use", fontSize = 11.sp, color = Neutral500)
+                        Text(
+                            if (state.isEvMode) "ISO 15118 Plug & Charge Encrypted" else "Encrypted & Secure",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = if (state.isEvMode) Teal500 else Success700,
+                        )
+                        Text(
+                            if (state.isEvMode) "Vehicle PKI handshake handles automatic billing seamlessly" else "Each QR is uniquely generated and expires after use",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }

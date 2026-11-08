@@ -116,3 +116,10 @@ val Gray50  = Neutral50
 val Green700 = Success700
 val Success600 = Color(0xFF16A34A)
 val Warning600 = Color(0xFFD97706)
+
+// ── EV Ecosystem Electric Accents ──
+val ElectricGreen = Color(0xFF00E676)
+val ElectricCyan  = Color(0xFF00E5FF)
+val ElectricTeal  = Color(0xFF00BFA5)
+val EvCardBg      = Color(0xFF082229)
+val EvCardBgLight = Color(0xFFE0F7F6)
