@@ -96,3 +96,4 @@ data class ReserveSlotResponse(
     @Json(name = "station_name") val stationName: String,
     @Json(name = "gun_id") val gunId: String,
 )
+

@@ -20,6 +20,22 @@ android {
         buildConfigField("String", "BASE_URL", "\"https://zappay-api.onrender.com/api/v1/\"")
     }
 
+    flavorDimensions += "role"
+    productFlavors {
+        create("customer") {
+            dimension = "role"
+            applicationId = "com.zappay.app"
+            manifestPlaceholders["appName"] = "ZapPay"
+            buildConfigField("String", "APP_ROLE", "\"customer\"")
+        }
+        create("partner") {
+            dimension = "role"
+            applicationId = "com.zappay.partner"
+            manifestPlaceholders["appName"] = "ZapPay Partner"
+            buildConfigField("String", "APP_ROLE", "\"partner\"")
+        }
+    }
+
     buildFeatures { compose = true; buildConfig = true }
 
     compileOptions {

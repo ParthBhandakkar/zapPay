@@ -75,8 +75,14 @@ fun ZapPayNavGraph(
         composable(Routes.SPLASH) {
             SplashScreen(
                 onSplashComplete = {
-                    navController.navigate(Routes.WELCOME) {
-                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    if (com.zappay.app.BuildConfig.APP_ROLE == "partner") {
+                        navController.navigate(Routes.PUMP_DASHBOARD) {
+                            popUpTo(Routes.SPLASH) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Routes.WELCOME) {
+                            popUpTo(Routes.SPLASH) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -96,6 +102,9 @@ fun ZapPayNavGraph(
                     navController.navigate(Routes.PUMP_DASHBOARD) {
                         popUpTo(Routes.WELCOME) { inclusive = true }
                     }
+                },
+                onSetupStationClick = {
+                    navController.navigate(Routes.SETUP_PUMP)
                 },
                 authViewModel = authViewModel,
             )

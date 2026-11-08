@@ -88,17 +88,17 @@ fun SplashScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "ZapPay",
-                fontSize = 36.sp,
+                text = if (com.zappay.app.BuildConfig.APP_ROLE == "partner") "ZapPay Partner" else "ZapPay",
+                fontSize = if (com.zappay.app.BuildConfig.APP_ROLE == "partner") 32.sp else 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = White,
-                letterSpacing = 2.sp
+                letterSpacing = 1.sp
             )
             
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "Fuel Payments, Simplified",
+                text = if (com.zappay.app.BuildConfig.APP_ROLE == "partner") "Forecourt & EV Station Hub" else "Fuel Payments, Simplified",
                 fontSize = 14.sp,
                 color = White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Medium,

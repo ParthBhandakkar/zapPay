@@ -885,3 +885,4 @@ private fun EvMetricRow(label: String, value: String) {
         Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
+
