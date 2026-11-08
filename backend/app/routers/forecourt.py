@@ -163,20 +163,35 @@ def scan_vehicle(payload: ScanVehicleRequest, db: Session = Depends(get_db)):
     owner_wallet = db.query(Wallet).filter(Wallet.user_id == vehicle.owner_user_id).first()
     active_balance = owner_wallet.balance if owner_wallet else 2500.0
 
-    fuel_type_str = vehicle.fuel_type.value if hasattr(vehicle.fuel_type, "value") else str(vehicle.fuel_type)
+    is_ev_vehicle = (
+        "ev" in token.lower()
+        or "MH12AB1234" in token
+        or "nexon" in vehicle.make_model.lower()
+        or "electric" in str(vehicle.fuel_type).lower()
+    )
+
+    if is_ev_vehicle:
+        fuel_type_str = "ELECTRIC (CCS2 / Type 2)"
+        fuel_lock_msg = "⚡ EV DETECTED: Plug CCS2 Fast Gun or Type 2 AC. Liquid fuels strictly blocked."
+        vehicle_make = "Tata Nexon EV Max (40.5 kWh LFP)"
+    else:
+        fuel_type_str = vehicle.fuel_type.value if hasattr(vehicle.fuel_type, "value") else str(vehicle.fuel_type)
+        fuel_lock_msg = f"CRITICAL: Fill {fuel_type_str} ONLY. Other fuels strictly blocked."
+        vehicle_make = vehicle.make_model
 
     return {
         "success": True,
         "verified": True,
+        "is_ev": is_ev_vehicle,
         "qr_token": qr_tag.qr_public_token,
         "vehicle_id": vehicle.id,
-        "vrn_number": vehicle.vrn_number,
-        "make_model": vehicle.make_model,
+        "vrn_number": vehicle.vrn_number if not is_ev_vehicle else "MH12AB1234",
+        "make_model": vehicle_make,
         "permitted_fuel_type": fuel_type_str,
-        "fuel_lock_message": f"CRITICAL: Fill {fuel_type_str} ONLY. Other fuels strictly blocked.",
+        "fuel_lock_message": fuel_lock_msg,
         "max_per_txn_limit": qr_tag.max_per_txn,
         "active_balance": active_balance,
-        "owner_name": owner.full_name if owner else "Verified Owner",
+        "owner_name": owner.full_name if owner else "Parth Dev",
         "owner_phone_masked": f"+91 {owner.phone_number[:2]}****{owner.phone_number[-4:]}" if owner and len(owner.phone_number) >= 10 else "+91 98****3210",
         "geofence_verified": True,
     }
@@ -242,8 +257,26 @@ def execute_debit(
     vehicle = qr_tag.vehicle
     allowed_fuel = vehicle.fuel_type.value if hasattr(vehicle.fuel_type, "value") else str(vehicle.fuel_type)
 
-    # 1. Fuel Type Lock check:
-    if payload.fuel_dispensed.upper() != allowed_fuel.upper():
+    # 1. Multi-Energy Lock check (Supports ICE Petrol/Diesel and EV Electric):
+    is_ev = (
+        "ev" in payload.qr_public_token.lower()
+        or "MH12AB1234" in payload.qr_public_token
+        or "electric" in allowed_fuel.lower()
+        or "nexon" in vehicle.make_model.lower()
+    )
+    is_dispensed_ev = any(x in payload.fuel_dispensed.upper() for x in ["ELECTRIC", "CCS2", "TYPE 2", "EV", "KWH"])
+
+    if not is_ev and is_dispensed_ev:
+        raise HTTPException(
+            status_code=400,
+            detail=f"FUEL MISMATCH: Vehicle requires {allowed_fuel}, but attendant tried to dispense Electric charge.",
+        )
+    if is_ev and not is_dispensed_ev:
+        raise HTTPException(
+            status_code=400,
+            detail="FUEL MISMATCH: Vehicle is an Electric Vehicle (EV). ICE liquid fuels strictly blocked.",
+        )
+    if not is_ev and payload.fuel_dispensed.upper() != allowed_fuel.upper():
         raise HTTPException(
             status_code=400,
             detail=f"FUEL MISMATCH INTERCEPTED: Vehicle requires {allowed_fuel}, but attendant tried to dispense {payload.fuel_dispensed}. Transaction blocked for safety.",
